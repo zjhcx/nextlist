@@ -6,6 +6,8 @@ import (
 	stdpath "path"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
@@ -17,7 +19,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/OpenListTeam/tache"
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -135,7 +136,7 @@ func copyNamedInStorage(ctx context.Context, storage driver.Driver, srcPath, dst
 	stageDirPath := stdpath.Join(dstDirPath, ".openlist-copy-"+uuid.NewString())
 	stageCtx := context.WithValue(ctx, conf.SkipHookKey, struct{}{})
 	if err := op.MakeDir(stageCtx, storage, stageDirPath); err != nil {
-		return errors.WithMessage(err, "failed create copy staging directory")
+		return errs.Wrap(err, "failed create copy staging directory")
 	}
 	stageCreated := true
 	removeStage := func() error {
@@ -151,13 +152,13 @@ func copyNamedInStorage(ctx context.Context, storage driver.Driver, srcPath, dst
 	}()
 
 	if err := op.Copy(stageCtx, storage, srcPath, stageDirPath); err != nil {
-		return errors.WithMessage(err, "failed copy object into staging directory")
+		return errs.Wrap(err, "failed copy object into staging directory")
 	}
 	srcName := stdpath.Base(srcPath)
 	stageObjPath := namedCopyStageObjectPath(stageDirPath, srcPath, "")
 	if srcName != dstName {
 		if err := op.Rename(stageCtx, storage, stageObjPath, dstName); err != nil {
-			return errors.WithMessage(err, "failed rename object in staging directory")
+			return errs.Wrap(err, "failed rename object in staging directory")
 		}
 		stageObjPath = namedCopyStageObjectPath(stageDirPath, srcPath, dstName)
 	}
@@ -165,10 +166,10 @@ func copyNamedInStorage(ctx context.Context, storage driver.Driver, srcPath, dst
 	// The final move intentionally uses the caller context to publish the target
 	// and trigger the normal cache/update hooks exactly once.
 	if err := op.Move(ctx, storage, stageObjPath, dstDirPath); err != nil {
-		return errors.WithMessage(err, "failed move copied object from staging directory")
+		return errs.Wrap(err, "failed move copied object from staging directory")
 	}
 	if err := removeStage(); err != nil {
-		return errors.WithMessagef(err, "failed remove copy staging directory %s; cleanup will be retried", stageDirPath)
+		return errs.Wrapf(err, "failed remove copy staging directory %s; cleanup will be retried", stageDirPath)
 	}
 	stageCreated = false
 	return nil
@@ -177,11 +178,11 @@ func copyNamedInStorage(ctx context.Context, storage driver.Driver, srcPath, dst
 func transfer(ctx context.Context, taskType taskType, srcObjPath, dstDirPath, dstName string, skipHook ...bool) (task.TaskExtensionInfo, error) {
 	srcStorage, srcObjActualPath, err := op.GetStorageAndActualPath(srcObjPath)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed get src storage")
+		return nil, errs.Wrap(err, "failed get src storage")
 	}
 	dstStorage, dstDirActualPath, err := op.GetStorageAndActualPath(dstDirPath)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed get dst storage")
+		return nil, errs.Wrap(err, "failed get dst storage")
 	}
 
 	if srcStorage.GetStorage() == dstStorage.GetStorage() {
@@ -265,14 +266,14 @@ func (t *FileTransferTask) RunWithNextTaskCallback(f func(nextTask *FileTransfer
 	t.Status = "getting src object"
 	srcObj, err := op.Get(t.Ctx(), t.SrcStorage, t.SrcActualPath)
 	if err != nil {
-		return errors.WithMessagef(err, "failed get src [%s] file", t.SrcActualPath)
+		return errs.Wrapf(err, "failed get src [%s] file", t.SrcActualPath)
 	}
 
 	if srcObj.IsDir() {
 		t.Status = "src object is dir, listing objs"
 		objs, err := op.List(t.Ctx(), t.SrcStorage, t.SrcActualPath, model.ListArgs{})
 		if err != nil {
-			return errors.WithMessagef(err, "failed list src [%s] objs", t.SrcActualPath)
+			return errs.Wrapf(err, "failed list src [%s] objs", t.SrcActualPath)
 		}
 		dstName := srcObj.GetName()
 		if t.DstName != "" {
@@ -280,7 +281,7 @@ func (t *FileTransferTask) RunWithNextTaskCallback(f func(nextTask *FileTransfer
 		}
 		dstActualPath := stdpath.Join(t.DstActualPath, dstName)
 		if err := op.MakeDir(t.Ctx(), t.DstStorage, dstActualPath); err != nil {
-			return errors.WithMessagef(err, "failed create dst dir [%s]", dstActualPath)
+			return errs.Wrapf(err, "failed create dst dir [%s]", dstActualPath)
 		}
 		existedObjs := make(map[string]bool)
 		if t.TaskType == merge {
@@ -288,7 +289,7 @@ func (t *FileTransferTask) RunWithNextTaskCallback(f func(nextTask *FileTransfer
 			if err != nil && !errors.Is(err, errs.ObjectNotFound) {
 				// 目标文件夹不存在的情况不是错误，会在之后新建文件夹
 				// 这种情况显然不需要统计existedObjs，dstObjs保持为nil，下面这个for将不会执行
-				return errors.WithMessagef(err, "failed list dst [%s] objs", dstActualPath)
+				return errs.Wrapf(err, "failed list dst [%s] objs", dstActualPath)
 			}
 			for _, obj := range dstObjs {
 				if err := t.Ctx().Err(); err != nil {
@@ -337,7 +338,7 @@ func (t *FileTransferTask) RunWithNextTaskCallback(f func(nextTask *FileTransfer
 	t.Status = "getting src object link"
 	link, srcObj, err := op.Link(t.Ctx(), t.SrcStorage, t.SrcActualPath, model.LinkArgs{})
 	if err != nil {
-		return errors.WithMessagef(err, "failed get [%s] link", t.SrcActualPath)
+		return errs.Wrapf(err, "failed get [%s] link", t.SrcActualPath)
 	}
 	// any link provided is seekable
 	streamObj := srcObj
@@ -350,7 +351,7 @@ func (t *FileTransferTask) RunWithNextTaskCallback(f func(nextTask *FileTransfer
 	}, link)
 	if err != nil {
 		_ = link.Close()
-		return errors.WithMessagef(err, "failed get [%s] stream", t.SrcActualPath)
+		return errs.Wrapf(err, "failed get [%s] stream", t.SrcActualPath)
 	}
 	t.SetTotalBytes(ss.GetSize())
 	t.Status = "uploading"

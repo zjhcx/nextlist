@@ -10,6 +10,8 @@ import (
 	stdpath "path"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/fs"
@@ -20,7 +22,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	ftpserver "github.com/fclairamb/ftpserverlib"
-	"github.com/pkg/errors"
 )
 
 type FileUploadProxy struct {
@@ -38,7 +39,7 @@ func uploadAuth(ctx context.Context, path string) error {
 	}
 	parentPath := stdpath.Dir(path)
 	parentMeta, err := op.GetNearestMeta(parentPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		return err
 	}
 	if !user.CanWriteContent() && !common.CanWriteContentBypassUserPerms(parentMeta, parentPath) {

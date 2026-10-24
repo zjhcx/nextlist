@@ -1,10 +1,13 @@
 package op
 
 import (
+	"fmt"
 	stdpath "path"
 	"strings"
 	"sync"
 	"time"
+
+	"errors"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/db"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
@@ -12,7 +15,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/pkg/singleflight"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/OpenListTeam/go-cache"
-	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -35,7 +37,7 @@ func getNearestMeta(path string) (*model.Meta, error) {
 		if err == nil {
 			return meta, nil
 		}
-		if errors.Cause(err) != errs.MetaNotFound {
+		if err != errs.MetaNotFound {
 			return nil, err
 		}
 		if !loaded {
@@ -51,7 +53,7 @@ func getNearestMeta(path string) (*model.Meta, error) {
 				continue
 			}
 			if matched != nil {
-				return nil, errors.Errorf("multiple metas match %q case-insensitively", path)
+				return nil, fmt.Errorf("multiple metas match %q case-insensitively", path)
 			}
 			matched = &metas[i]
 		}

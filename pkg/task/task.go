@@ -3,9 +3,11 @@ package task
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 
-	"github.com/pkg/errors"
+	"errors"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -75,7 +77,7 @@ func (t *Task[K]) run() {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Errorf("error [%s] while run task [%s],stack trace:\n%s", err, t.Name, getCurrentGoroutineStack())
-			t.Error = errors.Errorf("panic: %+v", err)
+			t.Error = fmt.Errorf("panic: %+v", err)
 			t.state = ERRORED
 		}
 	}()

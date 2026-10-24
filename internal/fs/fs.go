@@ -11,7 +11,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
 	"github.com/OpenListTeam/OpenList/v4/internal/task"
-	"github.com/pkg/errors"
 )
 
 // the param named path of functions in this package is a mount path
@@ -195,10 +194,10 @@ func Other(ctx context.Context, args model.FsOtherArgs) (interface{}, error) {
 func PutURL(ctx context.Context, path, dstName, urlStr string) error {
 	storage, dstDirActualPath, err := op.GetStorageAndActualPath(path)
 	if err != nil {
-		return errors.WithMessage(err, "failed get storage")
+		return errs.Wrap(err, "failed get storage")
 	}
 	if storage.Config().NoUpload {
-		return errors.WithStack(errs.UploadNotSupported)
+		return errs.UploadNotSupported
 	}
 	_, ok := storage.(driver.PutURL)
 	_, okResult := storage.(driver.PutURLResult)

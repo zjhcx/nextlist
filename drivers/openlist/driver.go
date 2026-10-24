@@ -223,6 +223,7 @@ func (d *OpenList) Put(ctx context.Context, dstDir model.Obj, s model.FileStream
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close()
 
 	bytes, err := io.ReadAll(res.Body)
 	if err != nil {

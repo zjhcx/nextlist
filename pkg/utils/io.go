@@ -29,8 +29,7 @@ func CopyWithCtx(ctx context.Context, out io.Writer, in io.Reader, size int64, p
 	// I insert the ability to cancel before read time as it is the earliest
 	// possible in the call process.
 	var finish int64 = 0
-	s := size / 100
-	_, err := CopyWithBuffer(out, readerFunc(func(p []byte) (int, error) {
+	written, err := CopyWithBuffer(out, readerFunc(func(p []byte) (int, error) {
 		// golang non-blocking channel: https://gobyexample.com/non-blocking-channel-operations
 		select {
 		// if context has been canceled
@@ -40,14 +39,26 @@ func CopyWithCtx(ctx context.Context, out io.Writer, in io.Reader, size int64, p
 		default:
 			// otherwise just run default io.Reader implementation
 			n, err := in.Read(p)
-			if s > 0 && (err == nil || err == io.EOF) {
+			if size > 0 && progress != nil && (err == nil || err == io.EOF) {
 				finish += int64(n)
-				progress(float64(finish) / float64(s))
+				progress(math.Min(100, float64(finish)/float64(size)*100))
 			}
 			return n, err
 		}
 	}))
-	return err
+	if err != nil {
+		return err
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if size > 0 && written != size {
+		return fmt.Errorf("copy size mismatch: expected %d bytes, wrote %d", size, written)
+	}
+	if size == 0 && written == 0 && progress != nil {
+		progress(100)
+	}
+	return nil
 }
 
 type limitWriter struct {

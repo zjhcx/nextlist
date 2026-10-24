@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/OpenListTeam/OpenList/v4/drivers/base"
@@ -56,7 +57,7 @@ func (d *AListV3) Init(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if utils.SliceContains(resp.Data.Role, model.GUEST) {
+	if slices.Contains(resp.Data.Role, model.GUEST) {
 		u := d.Address + "/api/public/settings"
 		res, err := base.RestyClient.R().Get(u)
 		if err != nil {
@@ -223,6 +224,7 @@ func (d *AListV3) Put(ctx context.Context, dstDir model.Obj, s model.FileStreame
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close()
 
 	bytes, err := io.ReadAll(res.Body)
 	if err != nil {

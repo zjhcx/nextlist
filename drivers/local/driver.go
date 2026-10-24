@@ -11,6 +11,7 @@ import (
 	"os"
 	stdpath "path"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -361,7 +362,7 @@ func (d *Local) Copy(_ context.Context, srcObj, dstDir model.Obj) error {
 
 func (d *Local) Remove(ctx context.Context, obj model.Obj) error {
 	var err error
-	if utils.SliceContains([]string{"", "delete permanently"}, d.RecycleBinPath) {
+	if slices.Contains([]string{"", "delete permanently"}, d.RecycleBinPath) {
 		if obj.IsDir() {
 			err = os.RemoveAll(obj.GetPath())
 		} else {
@@ -411,14 +412,16 @@ func (d *Local) Remove(ctx context.Context, obj model.Obj) error {
 	return nil
 }
 
-func (d *Local) Put(ctx context.Context, dstDir model.Obj, stream model.FileStreamer, up driver.UpdateProgress) error {
+func (d *Local) Put(ctx context.Context, dstDir model.Obj, stream model.FileStreamer, up driver.UpdateProgress) (err error) {
 	fullPath := filepath.Join(dstDir.GetPath(), stream.GetName())
 	out, err := os.Create(fullPath)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		_ = out.Close()
+		if closeErr := out.Close(); err == nil {
+			err = closeErr
+		}
 		if errors.Is(err, context.Canceled) {
 			_ = os.Remove(fullPath)
 		}

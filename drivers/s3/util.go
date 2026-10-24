@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
-	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -69,7 +69,7 @@ func (d *S3) getClient(clientType int) *s3.S3 {
 			}
 			//判断CustomHost是否以http://或https://开头
 			split := strings.SplitN(d.CustomHost, "://", 2)
-			if utils.SliceContains([]string{"http", "https"}, split[0]) {
+			if slices.Contains([]string{"http", "https"}, split[0]) {
 				r.HTTPRequest.URL.Scheme = split[0]
 				r.HTTPRequest.URL.Host = split[1]
 			} else {
@@ -83,7 +83,7 @@ func (d *S3) getClient(clientType int) *s3.S3 {
 				return
 			}
 			split := strings.SplitN(d.DirectUploadHost, "://", 2)
-			if utils.SliceContains([]string{"http", "https"}, split[0]) {
+			if slices.Contains([]string{"http", "https"}, split[0]) {
 				r.HTTPRequest.URL.Scheme = split[0]
 				r.HTTPRequest.URL.Host = split[1]
 			} else {

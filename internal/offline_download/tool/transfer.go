@@ -11,6 +11,7 @@ import (
 
 	_189pc "github.com/OpenListTeam/OpenList/v4/drivers/189pc"
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/fs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
@@ -21,7 +22,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/pkg/torrent"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/OpenListTeam/tache"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -127,7 +127,7 @@ var (
 func transferStd(ctx context.Context, tempDir, dstDirPath string, deletePolicy DeletePolicy) error {
 	dstStorage, dstDirActualPath, err := op.GetStorageAndActualPath(dstDirPath)
 	if err != nil {
-		return errors.WithMessage(err, "failed get dst storage")
+		return errs.Wrap(err, "failed get dst storage")
 	}
 	entries, err := os.ReadDir(tempDir)
 	if err != nil {
@@ -198,12 +198,12 @@ func transferStdPath(t *TransferTask) error {
 func transferStdFile(t *TransferTask) error {
 	rc, err := os.Open(t.SrcActualPath)
 	if err != nil {
-		return errors.Wrapf(err, "failed to open file %s", t.SrcActualPath)
+		return errs.Wrapf(err, "failed to open file %s", t.SrcActualPath)
 	}
 	info, err := rc.Stat()
 	if err != nil {
 		rc.Close()
-		return errors.Wrapf(err, "failed to get file %s", t.SrcActualPath)
+		return errs.Wrapf(err, "failed to get file %s", t.SrcActualPath)
 	}
 
 	// 尝试对天翼云进行秒传（计算 MD5 + sliceMD5）
@@ -220,7 +220,7 @@ func transferStdFile(t *TransferTask) error {
 		// 重新打开文件
 		rc, err = os.Open(t.SrcActualPath)
 		if err != nil {
-			return errors.Wrapf(err, "failed to reopen file %s", t.SrcActualPath)
+			return errs.Wrapf(err, "failed to reopen file %s", t.SrcActualPath)
 		}
 	}
 
@@ -259,15 +259,15 @@ func removeStdTemp(t *TransferTask) {
 func transferObj(ctx context.Context, tempDir, dstDirPath string, deletePolicy DeletePolicy) error {
 	srcStorage, srcObjActualPath, err := op.GetStorageAndActualPath(tempDir)
 	if err != nil {
-		return errors.WithMessage(err, "failed get src storage")
+		return errs.Wrap(err, "failed get src storage")
 	}
 	dstStorage, dstDirActualPath, err := op.GetStorageAndActualPath(dstDirPath)
 	if err != nil {
-		return errors.WithMessage(err, "failed get dst storage")
+		return errs.Wrap(err, "failed get dst storage")
 	}
 	objs, err := op.List(ctx, srcStorage, srcObjActualPath, model.ListArgs{})
 	if err != nil {
-		return errors.WithMessagef(err, "failed list src [%s] objs", tempDir)
+		return errs.Wrapf(err, "failed list src [%s] objs", tempDir)
 	}
 	taskCreator, _ := ctx.Value(conf.UserKey).(*model.User) // taskCreator is nil when convert failed
 	for _, obj := range objs {
@@ -297,13 +297,13 @@ func transferObjPath(t *TransferTask) error {
 	t.Status = "getting src object"
 	srcObj, err := op.Get(t.Ctx(), t.SrcStorage, t.SrcActualPath)
 	if err != nil {
-		return errors.WithMessagef(err, "failed get src [%s] file", t.SrcActualPath)
+		return errs.Wrapf(err, "failed get src [%s] file", t.SrcActualPath)
 	}
 	if srcObj.IsDir() {
 		t.Status = "src object is dir, listing objs"
 		objs, err := op.List(t.Ctx(), t.SrcStorage, t.SrcActualPath, model.ListArgs{})
 		if err != nil {
-			return errors.WithMessagef(err, "failed list src [%s] objs", t.SrcActualPath)
+			return errs.Wrapf(err, "failed list src [%s] objs", t.SrcActualPath)
 		}
 		dstDirActualPath := stdpath.Join(t.DstActualPath, srcObj.GetName())
 		task_group.TransferCoordinator.AppendPayload(t.groupID, task_group.DstPathToHook(dstDirActualPath))
@@ -339,11 +339,11 @@ func transferObjPath(t *TransferTask) error {
 func transferObjFile(t *TransferTask) error {
 	_, err := op.Get(t.Ctx(), t.SrcStorage, t.SrcActualPath)
 	if err != nil {
-		return errors.WithMessagef(err, "failed get src [%s] file", t.SrcActualPath)
+		return errs.Wrapf(err, "failed get src [%s] file", t.SrcActualPath)
 	}
 	link, srcFile, err := op.Link(t.Ctx(), t.SrcStorage, t.SrcActualPath, model.LinkArgs{})
 	if err != nil {
-		return errors.WithMessagef(err, "failed get [%s] link", t.SrcActualPath)
+		return errs.Wrapf(err, "failed get [%s] link", t.SrcActualPath)
 	}
 	// any link provided is seekable
 	ss, err := stream.NewSeekableStream(&stream.FileStream{
@@ -352,7 +352,7 @@ func transferObjFile(t *TransferTask) error {
 	}, link)
 	if err != nil {
 		_ = link.Close()
-		return errors.WithMessagef(err, "failed get [%s] stream", t.SrcActualPath)
+		return errs.Wrapf(err, "failed get [%s] stream", t.SrcActualPath)
 	}
 	t.SetTotalBytes(ss.GetSize())
 	return op.Put(context.WithValue(t.Ctx(), conf.SkipHookKey, struct{}{}), t.DstStorage, t.DstActualPath, ss, t.SetProgress)

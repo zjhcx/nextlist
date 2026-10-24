@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/url"
 	stdpath "path"
+	"slices"
 	"strings"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
@@ -84,13 +85,13 @@ func (d *Alias) Init(ctx context.Context) error {
 		}
 	}
 
-	if !utils.SliceContains(ValidReadConflictPolicy, d.ReadConflictPolicy) {
+	if !slices.Contains(ValidReadConflictPolicy, d.ReadConflictPolicy) {
 		d.ReadConflictPolicy = FirstRWP
 	}
-	if !utils.SliceContains(ValidWriteConflictPolicy, d.WriteConflictPolicy) {
+	if !slices.Contains(ValidWriteConflictPolicy, d.WriteConflictPolicy) {
 		d.WriteConflictPolicy = DisabledWP
 	}
-	if !utils.SliceContains(ValidPutConflictPolicy, d.PutConflictPolicy) {
+	if !slices.Contains(ValidPutConflictPolicy, d.PutConflictPolicy) {
 		d.PutConflictPolicy = DisabledWP
 	}
 	return nil

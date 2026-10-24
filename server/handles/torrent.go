@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
@@ -28,7 +30,6 @@ import (
 	hash_extend "github.com/OpenListTeam/OpenList/v4/pkg/utils/hash"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 )
 
 // seedRapidUploaderFor probes a storage driver for the generic
@@ -395,7 +396,7 @@ func TorrentRapidUpload(c *gin.Context) {
 
 	// 检查权限
 	meta, err := op.GetNearestMeta(reqPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		common.ErrorResp(c, err, 500, true)
 		return
 	}
@@ -580,7 +581,7 @@ func GenerateTorrentForPath(c *gin.Context) {
 
 	// 检查读取权限
 	meta, err := op.GetNearestMeta(reqPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		common.ErrorResp(c, err, 500, true)
 		return
 	}
@@ -910,7 +911,7 @@ func ConvertSeed(c *gin.Context) {
 			return
 		}
 		meta, metaErr := op.GetNearestMeta(dstDir)
-		if metaErr != nil && !errors.Is(errors.Cause(metaErr), errs.MetaNotFound) {
+		if metaErr != nil && !errors.Is(metaErr, errs.MetaNotFound) {
 			common.ErrorResp(c, metaErr, 500, true)
 			return
 		}
@@ -1132,7 +1133,7 @@ func SeedCapabilities(c *gin.Context) {
 				return
 			}
 			meta, metaErr := op.GetNearestMeta(fullPath)
-			if metaErr != nil && !errors.Is(errors.Cause(metaErr), errs.MetaNotFound) {
+			if metaErr != nil && !errors.Is(metaErr, errs.MetaNotFound) {
 				common.ErrorResp(c, metaErr, 500, true)
 				return
 			}
@@ -1204,7 +1205,7 @@ func SeedCapabilities(c *gin.Context) {
 		return
 	}
 	meta, err := op.GetNearestMeta(dstPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		common.ErrorResp(c, err, 500, true)
 		return
 	}
@@ -1317,7 +1318,7 @@ func rehashSeedFile(c *gin.Context, user *model.User, sourcePath string, pieceSi
 		return out, err
 	}
 	meta, err := op.GetNearestMeta(fullPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		return out, err
 	}
 	if !common.CanRead(user, meta, fullPath) {
@@ -1484,7 +1485,7 @@ func UpdateSeed(c *gin.Context) {
 			return
 		}
 		meta, metaErr := op.GetNearestMeta(dstDir)
-		if metaErr != nil && !errors.Is(errors.Cause(metaErr), errs.MetaNotFound) {
+		if metaErr != nil && !errors.Is(metaErr, errs.MetaNotFound) {
 			common.ErrorResp(c, metaErr, 500, true)
 			return
 		}
@@ -1514,7 +1515,7 @@ func saveSeedFilesToPath(c *gin.Context, user *model.User, seed *torrent.Seed, r
 		return nil, "", "", err
 	}
 	meta, err := op.GetNearestMeta(fullPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		return nil, "", "", err
 	}
 	if (!user.CanWriteContent() && !common.CanWriteContentBypassUserPerms(meta, fullPath)) || !common.CanWrite(user, meta, fullPath) {
@@ -1644,7 +1645,7 @@ func transferSeedViaTransit(c *gin.Context, user *model.User, seed *torrent.Seed
 		return
 	}
 	finalMeta, err := op.GetNearestMeta(finalDst)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		common.ErrorResp(c, err, 500, true)
 		return
 	}
@@ -1686,10 +1687,10 @@ func transferSeedViaTransit(c *gin.Context, user *model.User, seed *torrent.Seed
 
 // seedSaveErrorCode maps a save error to an HTTP status code.
 func seedSaveErrorCode(err error) int {
-	if errors.Is(errors.Cause(err), errs.PermissionDenied) {
+	if errors.Is(err, errs.PermissionDenied) {
 		return 403
 	}
-	if errors.Is(errors.Cause(err), errs.NotFolder) || errors.Is(errors.Cause(err), errs.ObjectNotFound) {
+	if errors.Is(err, errs.NotFolder) || errors.Is(err, errs.ObjectNotFound) {
 		return 400
 	}
 	return 500

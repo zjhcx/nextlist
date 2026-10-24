@@ -1,13 +1,14 @@
 package qbit
 
 import (
+	"fmt"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/offline_download/tool"
 	"github.com/OpenListTeam/OpenList/v4/internal/setting"
 	"github.com/OpenListTeam/OpenList/v4/pkg/qbittorrent"
-	"github.com/pkg/errors"
 )
 
 type QBittorrent struct {
@@ -72,9 +73,9 @@ func (a *QBittorrent) Status(task *tool.DownloadTask) (*tool.Status, error) {
 	case qbittorrent.ALLOCATING, qbittorrent.DOWNLOADING, qbittorrent.METADL, qbittorrent.PAUSEDDL, qbittorrent.QUEUEDDL, qbittorrent.STALLEDDL, qbittorrent.CHECKINGDL, qbittorrent.FORCEDDL, qbittorrent.CHECKINGRESUMEDATA, qbittorrent.MOVING:
 		s.Status = "[qBittorrent] downloading"
 	case qbittorrent.ERROR, qbittorrent.MISSINGFILES, qbittorrent.UNKNOWN:
-		s.Err = errors.Errorf("[qBittorrent] failed to download %s, error: %s", task.GID, info.State)
+		s.Err = fmt.Errorf("[qBittorrent] failed to download %s, error: %s", task.GID, info.State)
 	default:
-		s.Err = errors.Errorf("[qBittorrent] unknown error occurred downloading %s", task.GID)
+		s.Err = fmt.Errorf("[qBittorrent] unknown error occurred downloading %s", task.GID)
 	}
 	return s, nil
 }

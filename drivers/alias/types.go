@@ -3,9 +3,10 @@ package alias
 import (
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
-	"github.com/pkg/errors"
 )
 
 const (

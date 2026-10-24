@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/fs"
@@ -20,7 +22,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -92,11 +93,11 @@ func newFileBackup(ctx context.Context, originalPath string, keepOriginal bool) 
 			return backup, nil
 		}
 		if !errs.IsNotImplementError(err) && !errs.IsNotSupportError(err) {
-			return nil, errors.WithMessage(err, "failed to rename object into rollback backup")
+			return nil, errs.Wrap(err, "failed to rename object into rollback backup")
 		}
 	}
 	if _, err := fs.CopyTo(stagingContext(ctx), originalPath, path.Dir(originalPath), path.Base(backupPath)); err != nil {
-		return nil, cleanupAfterFailure(ctx, backupPath, errors.WithMessage(err, "failed to copy object into rollback backup"))
+		return nil, cleanupAfterFailure(ctx, backupPath, errs.Wrap(err, "failed to copy object into rollback backup"))
 	}
 	return backup, nil
 }
@@ -111,12 +112,12 @@ func (b *fileBackup) restore(ctx context.Context) error {
 	}
 	if b.renamed {
 		if err := fs.Rename(ctx, b.backupPath, path.Base(b.originalPath)); err != nil {
-			return errors.WithMessagef(err, "failed to restore %s from %s", b.originalPath, b.backupPath)
+			return errs.Wrapf(err, "failed to restore %s from %s", b.originalPath, b.backupPath)
 		}
 		return nil
 	}
 	if _, err := fs.CopyTo(context.WithValue(ctx, conf.NoTaskKey, struct{}{}), b.backupPath, path.Dir(b.originalPath), path.Base(b.originalPath)); err != nil {
-		return errors.WithMessagef(err, "failed to restore %s from %s", b.originalPath, b.backupPath)
+		return errs.Wrapf(err, "failed to restore %s from %s", b.originalPath, b.backupPath)
 	}
 	if err := fs.Remove(stagingContext(ctx), b.backupPath); err != nil {
 		if !errs.IsObjectNotFound(err) {
@@ -173,13 +174,13 @@ func copyWithRollback(ctx context.Context, src, dstDir, dstName string, dstExist
 		if !dstBackup.renamed {
 			if err := removeIfExists(ctx, dstPath); err != nil {
 				mutation := copyMutation(ctx, dstPath, stagePath, dstBackup)
-				return mutation, errors.WithMessage(err, "failed to remove destination after creating rollback copy")
+				return mutation, errs.Wrap(err, "failed to remove destination after creating rollback copy")
 			}
 		}
 	}
 	mutation := copyMutation(ctx, dstPath, stagePath, dstBackup)
 	if err := installStagedObject(ctx, stagePath, dstDir, dstName); err != nil {
-		return mutation, errors.WithMessage(err, "failed to install staged COPY")
+		return mutation, errs.Wrap(err, "failed to install staged COPY")
 	}
 	return mutation, nil
 }
@@ -229,7 +230,7 @@ func moveWithRollback(ctx context.Context, src, dst, dstDir, srcDir, srcName, ds
 		if !dstBackup.renamed {
 			if err := removeIfExists(ctx, dst); err != nil {
 				mutation := moveMutation(ctx, dst, dstDir, srcName, dstName, srcBackup, dstBackup)
-				return mutation, errors.WithMessage(err, "failed to remove destination after creating rollback copy")
+				return mutation, errs.Wrap(err, "failed to remove destination after creating rollback copy")
 			}
 		}
 	}
@@ -316,11 +317,11 @@ func moveFiles(ctx context.Context, src, dst string, overwrite bool) (status int
 		return http.StatusForbidden, nil
 	}
 	srcMeta, err := op.GetNearestMeta(srcDir)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		return http.StatusInternalServerError, err
 	}
 	dstMeta, err := op.GetNearestMeta(dstDir)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		return http.StatusInternalServerError, err
 	}
 	if !common.CanWrite(user, srcMeta, srcDir) || !common.CanWrite(user, dstMeta, dstDir) {
@@ -377,14 +378,14 @@ func copyFiles(ctx context.Context, src, dst string, overwrite bool, depth int) 
 		return http.StatusForbidden, nil
 	}
 	srcMeta, err := op.GetNearestMeta(srcDir)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		return http.StatusInternalServerError, err
 	}
 	if !common.CanRead(user, srcMeta, srcDir) {
 		return http.StatusForbidden, nil
 	}
 	dstMeta, err := op.GetNearestMeta(dstDir)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		return http.StatusInternalServerError, err
 	}
 	if !common.CanWrite(user, dstMeta, dstDir) {

@@ -14,7 +14,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/internal/task"
 	"github.com/OpenListTeam/OpenList/v4/internal/task_group"
 	"github.com/OpenListTeam/tache"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -39,7 +38,7 @@ func (t *DownloadTask) Run() error {
 	if t.tool == nil {
 		tool, err := Tools.Get(t.Toolname)
 		if err != nil {
-			return errors.WithMessage(err, "failed get tool")
+			return errs.Wrap(err, "failed get tool")
 		}
 		t.tool = tool
 	}
@@ -152,7 +151,7 @@ func (t *DownloadTask) Update() (bool, error) {
 		t.callStatusRetried++
 		log.Errorf("failed to get status of %s, retried %d times", t.ID, t.callStatusRetried)
 		if t.callStatusRetried > 5 {
-			return true, errors.Errorf("failed to get status of %s, retried %d times", t.ID, t.callStatusRetried)
+			return true, fmt.Errorf("failed to get status of %s, retried %d times", t.ID, t.callStatusRetried)
 		}
 		return false, nil
 	}
@@ -168,11 +167,11 @@ func (t *DownloadTask) Update() (bool, error) {
 	// if download completed
 	if info.Completed {
 		err := t.Transfer()
-		return true, errors.WithMessage(err, "failed to transfer file")
+		return true, errs.Wrap(err, "failed to transfer file")
 	}
 	// if download failed
 	if info.Err != nil {
-		return true, errors.Errorf("failed to download %s, error: %s", t.ID, info.Err.Error())
+		return true, fmt.Errorf("failed to download %s, error: %s", t.ID, info.Err.Error())
 	}
 	return false, nil
 }
@@ -189,7 +188,7 @@ func (t *DownloadTask) Transfer() error {
 	if t.DeletePolicy == UploadDownloadStream {
 		dstStorage, dstDirActualPath, err := op.GetStorageAndActualPath(t.DstDirPath)
 		if err != nil {
-			return errors.WithMessage(err, "failed get dst storage")
+			return errs.Wrap(err, "failed get dst storage")
 		}
 		taskCreator, _ := t.Ctx().Value(conf.UserKey).(*model.User)
 		tsk := &TransferTask{

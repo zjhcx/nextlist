@@ -20,10 +20,11 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/internal/stream"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 
+	"errors"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -172,7 +173,7 @@ func (y *Cloud189TV) put(ctx context.Context, url string, headers map[string]str
 		return nil, &erron
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("put fail,err:%s", string(body))
+		return nil, fmt.Errorf("put fail,err:%s", string(body))
 	}
 	return body, nil
 }
@@ -184,7 +185,7 @@ func (y *Cloud189TV) getFiles(ctx context.Context, fileId string, isFamily bool)
 	}
 	fullUrl += "/listFiles.action"
 
-    pageSize := 130  // 每一页返回的文件数量
+	pageSize := 130 // 每一页返回的文件数量
 	res := make([]model.Obj, 0, 130)
 	for pageNum := 1; ; pageNum++ {
 		var resp Cloud189FilesResp
@@ -219,10 +220,10 @@ func (y *Cloud189TV) getFiles(ctx context.Context, fileId string, isFamily bool)
 		if resp.FileListAO.Count == 0 {
 			break
 		}
-		
+
 		FolderCount := len(resp.FileListAO.FolderList) // 当前文件夹总数
-        FileCount := len(resp.FileListAO.FileList) // 当前文件总数
-        PageCount := FolderCount + FileCount // 当前页数总数
+		FileCount := len(resp.FileListAO.FileList)     // 当前文件总数
+		PageCount := FolderCount + FileCount           // 当前页数总数
 
 		for i := 0; i < FolderCount; i++ {
 			res = append(res, &resp.FileListAO.FolderList[i])
@@ -230,11 +231,11 @@ func (y *Cloud189TV) getFiles(ctx context.Context, fileId string, isFamily bool)
 		for i := 0; i < FileCount; i++ {
 			res = append(res, &resp.FileListAO.FileList[i])
 		}
-		
+
 		// 文件数量小于设定数量时跳出
 		if PageCount < pageSize {
-            break
-        }
+			break
+		}
 	}
 	return res, nil
 }

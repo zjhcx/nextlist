@@ -32,9 +32,9 @@ func (c *Client) req(method, path string, body io.Reader, intercept func(*http.R
 			retryBuf = buff
 			body = io.TeeReader(body, buff)
 		}
-		r, err = http.NewRequest(method, PathEscape(Join(c.root, path)), body)
+		r, err = http.NewRequestWithContext(c.ctx, method, PathEscape(Join(c.root, path)), body)
 	} else {
-		r, err = http.NewRequest(method, PathEscape(Join(c.root, path)), nil)
+		r, err = http.NewRequestWithContext(c.ctx, method, PathEscape(Join(c.root, path)), nil)
 	}
 
 	if err != nil {
@@ -49,9 +49,9 @@ func (c *Client) req(method, path string, body io.Reader, intercept func(*http.R
 
 	// make sure we read 'c.auth' only once since it will be substituted below
 	// and that is unsafe to do when multiple goroutines are running at the same time.
-	c.authMutex.Lock()
-	auth := c.auth
-	c.authMutex.Unlock()
+	c.authState.mu.Lock()
+	auth := c.authState.auth
+	c.authState.mu.Unlock()
 
 	auth.Authorize(r, method, path)
 
@@ -72,24 +72,27 @@ func (c *Client) req(method, path string, body io.Reader, intercept func(*http.R
 		wwwAuthenticateHeader := strings.ToLower(rs.Header.Get("Www-Authenticate"))
 
 		if strings.Index(wwwAuthenticateHeader, "digest") > -1 {
-			c.authMutex.Lock()
-			c.auth = &DigestAuth{auth.User(), auth.Pass(), digestParts(rs)}
-			c.authMutex.Unlock()
+			c.authState.mu.Lock()
+			c.authState.auth = &DigestAuth{auth.User(), auth.Pass(), digestParts(rs)}
+			c.authState.mu.Unlock()
 		} else if strings.Index(wwwAuthenticateHeader, "basic") > -1 {
-			c.authMutex.Lock()
-			c.auth = &BasicAuth{auth.User(), auth.Pass()}
-			c.authMutex.Unlock()
+			c.authState.mu.Lock()
+			c.authState.auth = &BasicAuth{auth.User(), auth.Pass()}
+			c.authState.mu.Unlock()
 		} else {
-			return rs, newPathError("Authorize", c.root, rs.StatusCode)
+			_ = rs.Body.Close()
+			return nil, newPathError("Authorize", c.root, rs.StatusCode)
 		}
 
 		// retryBuf will be nil if body was nil initially so no check
 		// for body == nil is required here.
 		if canRetry {
+			_ = rs.Body.Close()
 			return c.req(method, path, retryBuf, intercept)
 		}
 	} else if rs.StatusCode == 401 {
-		return rs, newPathError("Authorize", c.root, rs.StatusCode)
+		_ = rs.Body.Close()
+		return nil, newPathError("Authorize", c.root, rs.StatusCode)
 	}
 
 	return rs, err

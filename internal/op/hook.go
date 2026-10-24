@@ -11,7 +11,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -66,7 +65,7 @@ var settingItemHooks = map[string]SettingItemHook{
 		for _, regStr := range regStrs {
 			reg, err := regexp.Compile(regStr)
 			if err != nil {
-				return errors.WithStack(err)
+				return err
 			}
 			regs = append(regs, reg)
 		}

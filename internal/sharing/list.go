@@ -10,30 +10,29 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
-	"github.com/pkg/errors"
 )
 
 func list(ctx context.Context, sid, path string, args model.SharingListArgs) (*model.Sharing, []model.Obj, error) {
 	sharing, err := op.GetSharingById(sid, args.Refresh)
 	if err != nil {
-		return nil, nil, errors.WithStack(errs.SharingNotFound)
+		return nil, nil, errs.SharingNotFound
 	}
 	if !sharing.Valid() {
-		return sharing, nil, errors.WithStack(errs.InvalidSharing)
+		return sharing, nil, errs.InvalidSharing
 	}
 	if !sharing.Verify(args.Pwd) {
-		return sharing, nil, errors.WithStack(errs.WrongShareCode)
+		return sharing, nil, errs.WrongShareCode
 	}
 	path = utils.FixAndCleanPath(path)
 	if len(sharing.Files) == 1 || path != "/" {
 		unwrapPath, err := op.GetSharingUnwrapPath(sharing, path)
 		if err != nil {
-			return nil, nil, errors.WithMessage(err, "failed get sharing unwrap path")
+			return nil, nil, errs.Wrap(err, "failed get sharing unwrap path")
 		}
 		virtualFiles := op.GetStorageVirtualFilesByPath(unwrapPath)
 		storage, actualPath, err := op.GetStorageAndActualPath(unwrapPath)
 		if err != nil && len(virtualFiles) == 0 {
-			return nil, nil, errors.WithMessage(err, "failed list sharing")
+			return nil, nil, errs.Wrap(err, "failed list sharing")
 		}
 		var objs []model.Obj
 		if storage != nil {
@@ -50,7 +49,7 @@ func list(ctx context.Context, sid, path string, args model.SharingListArgs) (*m
 				ReqPath: stdpath.Join(sid, path),
 			})
 			if err != nil && len(virtualFiles) == 0 {
-				return nil, nil, errors.WithMessage(err, "failed list sharing")
+				return nil, nil, errs.Wrap(err, "failed list sharing")
 			}
 		}
 		om := model.NewObjMerge()

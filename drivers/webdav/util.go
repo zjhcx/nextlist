@@ -1,6 +1,7 @@
 package webdav
 
 import (
+	"context"
 	"crypto/tls"
 	"net/http"
 	"net/http/cookiejar"
@@ -40,8 +41,16 @@ func (d *WebDav) setClient() error {
 			return err
 		}
 	}
+	d.clientMu.Lock()
 	d.client = c
+	d.clientMu.Unlock()
 	return nil
+}
+
+func (d *WebDav) requestClient(ctx context.Context) *gowebdav.Client {
+	d.clientMu.RLock()
+	defer d.clientMu.RUnlock()
+	return d.client.WithContext(ctx)
 }
 
 func getPath(obj model.Obj) string {

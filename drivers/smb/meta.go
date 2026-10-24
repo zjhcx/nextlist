@@ -7,10 +7,12 @@ import (
 
 type Addition struct {
 	driver.RootPath
-	Address   string `json:"address" required:"true"`
-	Username  string `json:"username" required:"true"`
-	Password  string `json:"password"`
-	ShareName string `json:"share_name" required:"true"`
+	Address      string `json:"address" required:"true"`
+	Username     string `json:"username" required:"true"`
+	Domain       string `json:"domain" help:"Optional NTLM domain"`
+	Password     string `json:"password"`
+	ShareName    string `json:"share_name" required:"true"`
+	AtomicUpload bool   `json:"atomic_upload" default:"true" help:"Stage uploads before rename; requires create, rename and delete permissions"`
 }
 
 var config = driver.Config{

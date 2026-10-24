@@ -3,10 +3,12 @@ package db
 import (
 	"encoding/base64"
 
+	"errors"
+
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/pkg/errors"
 )
 
 func GetUserByRole(role int) (*model.User, error) {
@@ -20,7 +22,7 @@ func GetUserByRole(role int) (*model.User, error) {
 func GetUserByName(username string) (*model.User, error) {
 	user := model.User{Username: username}
 	if err := db.Where(user).First(&user).Error; err != nil {
-		return nil, errors.Wrapf(err, "failed find user")
+		return nil, errs.Wrapf(err, "failed find user")
 	}
 	return &user, nil
 }
@@ -28,7 +30,7 @@ func GetUserByName(username string) (*model.User, error) {
 func GetUserBySSOID(ssoID string) (*model.User, error) {
 	user := model.User{SsoID: ssoID}
 	if err := db.Where(user).First(&user).Error; err != nil {
-		return nil, errors.Wrapf(err, "The single sign on platform is not bound to any users")
+		return nil, errs.Wrapf(err, "The single sign on platform is not bound to any users")
 	}
 	return &user, nil
 }
@@ -36,32 +38,32 @@ func GetUserBySSOID(ssoID string) (*model.User, error) {
 func GetUserById(id uint) (*model.User, error) {
 	var u model.User
 	if err := db.First(&u, id).Error; err != nil {
-		return nil, errors.Wrapf(err, "failed get old user")
+		return nil, errs.Wrapf(err, "failed get old user")
 	}
 	return &u, nil
 }
 
 func CreateUser(u *model.User) error {
-	return errors.WithStack(db.Create(u).Error)
+	return db.Create(u).Error
 }
 
 func UpdateUser(u *model.User) error {
-	return errors.WithStack(db.Save(u).Error)
+	return db.Save(u).Error
 }
 
 func GetUsers(pageIndex, pageSize int) (users []model.User, count int64, err error) {
 	userDB := db.Model(&model.User{})
 	if err := userDB.Count(&count).Error; err != nil {
-		return nil, 0, errors.Wrapf(err, "failed get users count")
+		return nil, 0, errs.Wrapf(err, "failed get users count")
 	}
 	if err := userDB.Order(columnName("id")).Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&users).Error; err != nil {
-		return nil, 0, errors.Wrapf(err, "failed get find users")
+		return nil, 0, errs.Wrapf(err, "failed get find users")
 	}
 	return users, count, nil
 }
 
 func DeleteUserById(id uint) error {
-	return errors.WithStack(db.Delete(&model.User{}, id).Error)
+	return db.Delete(&model.User{}, id).Error
 }
 
 func UpdateAuthn(userID uint, authn string) error {

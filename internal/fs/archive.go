@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
@@ -22,7 +24,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/internal/task_group"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/OpenListTeam/tache"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -349,7 +350,7 @@ var ArchiveContentUploadTaskManager = &archiveContentUploadTaskManagerType{
 func archiveMeta(ctx context.Context, path string, args model.ArchiveMetaArgs) (*model.ArchiveMetaProvider, error) {
 	storage, actualPath, err := op.GetStorageAndActualPath(path)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed get storage")
+		return nil, errs.Wrap(err, "failed get storage")
 	}
 	return op.GetArchiveMeta(ctx, storage, actualPath, args)
 }
@@ -357,7 +358,7 @@ func archiveMeta(ctx context.Context, path string, args model.ArchiveMetaArgs) (
 func archiveList(ctx context.Context, path string, args model.ArchiveListArgs) ([]model.Obj, error) {
 	storage, actualPath, err := op.GetStorageAndActualPath(path)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed get storage")
+		return nil, errs.Wrap(err, "failed get storage")
 	}
 	return op.ListArchive(ctx, storage, actualPath, args)
 }
@@ -365,11 +366,11 @@ func archiveList(ctx context.Context, path string, args model.ArchiveListArgs) (
 func archiveDecompress(ctx context.Context, srcObjPath, dstDirPath string, args model.ArchiveDecompressArgs, lazyCache ...bool) (task.TaskExtensionInfo, error) {
 	srcStorage, srcObjActualPath, err := op.GetStorageAndActualPath(srcObjPath)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed get src storage")
+		return nil, errs.Wrap(err, "failed get src storage")
 	}
 	dstStorage, dstDirActualPath, err := op.GetStorageAndActualPath(dstDirPath)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed get dst storage")
+		return nil, errs.Wrap(err, "failed get dst storage")
 	}
 	if srcStorage.GetStorage() == dstStorage.GetStorage() {
 		err = op.ArchiveDecompress(ctx, srcStorage, srcObjActualPath, dstDirActualPath, args, lazyCache...)
@@ -392,7 +393,7 @@ func archiveDecompress(ctx context.Context, srcObjPath, dstDirPath string, args 
 		tsk.Base.SetCtx(ctx)
 		uploadTask, err := tsk.RunWithoutPushUploadTask()
 		if err != nil {
-			return nil, errors.WithMessagef(err, "failed download [%s]", srcObjPath)
+			return nil, errs.Wrapf(err, "failed download [%s]", srcObjPath)
 		}
 		defer uploadTask.deleteSrcFile()
 		var callback func(t *ArchiveContentUploadTask) error
@@ -423,7 +424,7 @@ func archiveDecompress(ctx context.Context, srcObjPath, dstDirPath string, args 
 func archiveDriverExtract(ctx context.Context, path string, args model.ArchiveInnerArgs) (*model.Link, model.Obj, error) {
 	storage, actualPath, err := op.GetStorageAndActualPath(path)
 	if err != nil {
-		return nil, nil, errors.WithMessage(err, "failed get storage")
+		return nil, nil, errs.Wrap(err, "failed get storage")
 	}
 	return op.DriverExtract(ctx, storage, actualPath, args)
 }
@@ -431,7 +432,7 @@ func archiveDriverExtract(ctx context.Context, path string, args model.ArchiveIn
 func archiveInternalExtract(ctx context.Context, path string, args model.ArchiveInnerArgs) (io.ReadCloser, int64, error) {
 	storage, actualPath, err := op.GetStorageAndActualPath(path)
 	if err != nil {
-		return nil, 0, errors.WithMessage(err, "failed get storage")
+		return nil, 0, errs.Wrap(err, "failed get storage")
 	}
 	return op.InternalExtract(ctx, storage, actualPath, args)
 }

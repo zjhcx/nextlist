@@ -16,7 +16,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/internal/task"
 	"github.com/OpenListTeam/OpenList/v4/internal/task_group"
 	"github.com/OpenListTeam/tache"
-	"github.com/pkg/errors"
 )
 
 type UploadTask struct {
@@ -63,15 +62,15 @@ var UploadTaskManager *tache.Manager[*UploadTask]
 func putAsTask(ctx context.Context, dstDirPath string, file model.FileStreamer) (task.TaskExtensionInfo, error) {
 	storage, dstDirActualPath, err := op.GetStorageAndActualPath(dstDirPath)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed get storage")
+		return nil, errs.Wrap(err, "failed get storage")
 	}
 	if storage.Config().NoUpload {
-		return nil, errors.WithStack(errs.UploadNotSupported)
+		return nil, errs.UploadNotSupported
 	}
 	if file.NeedStore() {
 		_, err := file.CacheFullAndWriter(nil, nil)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to create temp file")
+			return nil, errs.Wrapf(err, "failed to create temp file")
 		}
 		//file.SetReader(tempFile)
 		//file.SetTmpFile(tempFile)
@@ -97,11 +96,11 @@ func putDirectly(ctx context.Context, dstDirPath string, file model.FileStreamer
 	storage, dstDirActualPath, err := op.GetStorageAndActualPath(dstDirPath)
 	if err != nil {
 		_ = file.Close()
-		return errors.WithMessage(err, "failed get storage")
+		return errs.Wrap(err, "failed get storage")
 	}
 	if storage.Config().NoUpload {
 		_ = file.Close()
-		return errors.WithStack(errs.UploadNotSupported)
+		return errs.UploadNotSupported
 	}
 	if utils.IsBool(skipHook...) {
 		ctx = context.WithValue(ctx, conf.SkipHookKey, struct{}{})
@@ -112,7 +111,7 @@ func putDirectly(ctx context.Context, dstDirPath string, file model.FileStreamer
 func getDirectUploadInfo(ctx context.Context, tool, dstDirPath, dstName string, fileSize int64, overwrite bool) (any, error) {
 	storage, dstDirActualPath, err := op.GetStorageAndActualPath(dstDirPath)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed get storage")
+		return nil, errs.Wrap(err, "failed get storage")
 	}
 	return op.GetDirectUploadInfo(ctx, tool, storage, dstDirActualPath, dstName, fileSize, overwrite)
 }

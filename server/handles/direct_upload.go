@@ -6,6 +6,8 @@ import (
 	"net/url"
 	stdpath "path"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/fs"
@@ -13,7 +15,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 )
 
 type FsGetDirectUploadInfoReq struct {
@@ -55,7 +56,7 @@ func FsGetDirectUploadInfo(c *gin.Context) {
 	path = stdpath.Dir(dstPath)
 	req.FileName = stdpath.Base(dstPath)
 	parentMeta, err := op.GetNearestMeta(path)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		common.ErrorResp(c, err, 500, true)
 		return
 	}

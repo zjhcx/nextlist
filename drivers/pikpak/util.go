@@ -16,8 +16,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/drivers/base"
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	netutil "github.com/OpenListTeam/OpenList/v4/internal/net"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
@@ -25,7 +28,6 @@ import (
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/go-resty/resty/v2"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 )
 
 var AndroidAlgorithms = []string{
@@ -529,7 +531,7 @@ func (d *PikPak) UploadByMultipart(ctx context.Context, params *S3Params, fileSi
 					}
 					select {
 					case <-ticker.C:
-						errCh <- errors.Wrap(err, "ossToken 过期")
+						errCh <- errs.Wrap(err, "ossToken 过期")
 					default:
 					}
 
@@ -544,7 +546,7 @@ func (d *PikPak) UploadByMultipart(ctx context.Context, params *S3Params, fileSi
 					}
 				}
 				if err != nil {
-					errCh <- errors.Wrap(err, fmt.Sprintf("上传 %s 的第%d个分片时出现错误：%v", s.GetName(), chunk.Number, err))
+					errCh <- errs.Wrap(err, fmt.Sprintf("上传 %s 的第%d个分片时出现错误：%v", s.GetName(), chunk.Number, err))
 				} else {
 					num := completedNum.Add(1)
 					up(float64(num) * 100.0 / float64(len(chunks)))

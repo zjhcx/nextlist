@@ -7,13 +7,14 @@ import (
 	"strings"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/fs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -349,7 +350,7 @@ func (d *Alias) getCopyObjs(ctx context.Context, srcObj, dstDir model.Obj) (Bala
 	for _, o := range dstObjs {
 		storage, e := fs.GetStorage(o.GetPath(), &fs.GetStoragesArgs{})
 		if e != nil {
-			return nil, nil, errors.WithMessagef(e, "cannot copy to virtual path [%s]", o.GetPath())
+			return nil, nil, errs.Wrapf(e, "cannot copy to virtual path [%s]", o.GetPath())
 		}
 		mp := storage.GetStorage().MountPath
 		dstStorageMap[mp] = append(dstStorageMap[mp], o)
@@ -407,7 +408,7 @@ func (d *Alias) getMoveObjs(ctx context.Context, srcObj, dstDir model.Obj) (Bala
 	for _, o := range dstObjs {
 		storage, e := fs.GetStorage(o.GetPath(), &fs.GetStoragesArgs{})
 		if e != nil {
-			return nil, nil, errors.WithMessagef(e, "cannot move to virtual path [%s]", o.GetPath())
+			return nil, nil, errs.Wrapf(e, "cannot move to virtual path [%s]", o.GetPath())
 		}
 		mp := storage.GetStorage().MountPath
 		dstStorageMap[mp] = append(dstStorageMap[mp], o)

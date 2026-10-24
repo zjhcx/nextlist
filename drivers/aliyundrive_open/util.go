@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -167,7 +168,7 @@ func (d *AliyundriveOpen) requestReturnErrResp(ctx context.Context, limitTy limi
 	}
 	isRetry := len(retry) > 0 && retry[0]
 	if e.Code != "" {
-		if !isRetry && (utils.SliceContains([]string{"AccessTokenInvalid", "AccessTokenExpired", "I400JD"}, e.Code) || d.getAccessToken() == "") {
+		if !isRetry && (slices.Contains([]string{"AccessTokenInvalid", "AccessTokenExpired", "I400JD"}, e.Code) || d.getAccessToken() == "") {
 			err = d.refreshToken(ctx)
 			if err != nil {
 				return nil, err, nil

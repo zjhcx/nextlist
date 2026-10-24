@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
-	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -80,7 +80,7 @@ func SearchNode(req model.SearchReq, useFullText bool) ([]model.SearchNode, int6
 
 	var count int64
 	if err := searchDB.Count(&count).Error; err != nil {
-		return nil, 0, errors.Wrapf(err, "failed get search items count")
+		return nil, 0, errs.Wrapf(err, "failed get search items count")
 	}
 	var files []model.SearchNode
 	if err := searchDB.Order("name asc").Offset((req.Page - 1) * req.PerPage).Limit(req.PerPage).

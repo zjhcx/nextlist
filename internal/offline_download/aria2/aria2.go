@@ -14,7 +14,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/internal/offline_download/tool"
 	"github.com/OpenListTeam/OpenList/v4/internal/setting"
 	"github.com/OpenListTeam/OpenList/v4/pkg/aria2/rpc"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -46,11 +45,11 @@ func (a *Aria2) Init() (string, error) {
 	secret := setting.GetStr(conf.Aria2Secret)
 	c, err := rpc.New(context.Background(), uri, secret, 4*time.Second, notify)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to init aria2 client")
+		return "", errs.Wrap(err, "failed to init aria2 client")
 	}
 	version, err := c.GetVersion()
 	if err != nil {
-		return "", errors.Wrapf(err, "failed get aria2 version")
+		return "", errs.Wrapf(err, "failed get aria2 version")
 	}
 	a.client = c
 	log.Infof("using aria2 version: %s", version.Version)
@@ -110,7 +109,7 @@ func (a *Aria2) Status(task *tool.DownloadTask) (*tool.Status, error) {
 	case "complete":
 		s.Completed = true
 	case "error":
-		s.Err = errors.Errorf("failed to download %s, error: %s", task.GID, info.ErrorMessage)
+		s.Err = fmt.Errorf("failed to download %s, error: %s", task.GID, info.ErrorMessage)
 	case "active":
 		s.Status = "aria2: " + info.Status
 		if info.Seeder == "true" {
@@ -119,9 +118,9 @@ func (a *Aria2) Status(task *tool.DownloadTask) (*tool.Status, error) {
 	case "waiting", "paused":
 		s.Status = "aria2: " + info.Status
 	case "removed":
-		s.Err = errors.Errorf("failed to download %s, removed", task.GID)
+		s.Err = fmt.Errorf("failed to download %s, removed", task.GID)
 	default:
-		return nil, errors.Errorf("[aria2] unknown status %s", info.Status)
+		return nil, fmt.Errorf("[aria2] unknown status %s", info.Status)
 	}
 	return s, nil
 }

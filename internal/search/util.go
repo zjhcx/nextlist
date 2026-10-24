@@ -1,6 +1,7 @@
 package search
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/OpenListTeam/OpenList/v4/drivers/base"
@@ -44,7 +45,7 @@ func updateIgnorePaths(customIgnorePaths string) {
 	var skipDrivers = []string{"OpenList", "Virtual"}
 	v3Visited := make(map[string]bool)
 	for _, storage := range storages {
-		if utils.SliceContains(skipDrivers, storage.Config().Name) {
+		if slices.Contains(skipDrivers, storage.Config().Name) {
 			if storage.Config().Name == "OpenList" {
 				addition := storage.GetAddition().(*openlist.Addition)
 				allowIndexed, visited := v3Visited[addition.Address]
@@ -88,7 +89,7 @@ func init() {
 	})
 	op.RegisterStorageHook(func(typ string, storage driver.Driver) {
 		var skipDrivers = []string{"OpenList", "Virtual"}
-		if utils.SliceContains(skipDrivers, storage.Config().Name) {
+		if slices.Contains(skipDrivers, storage.Config().Name) {
 			updateIgnorePaths(setting.GetStr(conf.IgnorePaths))
 		}
 	})

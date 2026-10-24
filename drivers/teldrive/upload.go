@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/drivers/base"
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
@@ -19,7 +21,6 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"

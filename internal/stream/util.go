@@ -124,11 +124,26 @@ func GetRangeReaderFromLink(size int64, link *model.Link) (model.RangeReaderIF, 
 func GetRangeReaderFromMFile(size int64, file model.File) *model.FileRangeReader {
 	return &model.FileRangeReader{
 		RangeReaderIF: RangeReaderFunc(func(ctx context.Context, httpRange http_range.Range) (io.ReadCloser, error) {
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+			if size < 0 || httpRange.Start < 0 || httpRange.Length < -1 {
+				return nil, http_range.ErrInvalid
+			}
+			if httpRange.Start > size || (size > 0 && httpRange.Start == size) {
+				return nil, http_range.ErrNoOverlap
+			}
 			length := httpRange.Length
-			if length < 0 || httpRange.Start+length > size {
+			if length < 0 || length > size-httpRange.Start {
 				length = size - httpRange.Start
 			}
-			return &model.FileCloser{File: io.NewSectionReader(file, httpRange.Start, length)}, nil
+			reader := file
+			if limited, ok := file.(*RateLimitFile); ok {
+				// Cached links outlive the request that created them. Do not reuse
+				// that request's canceled context for a later ranged download.
+				reader = &RateLimitFile{File: limited.File, Limiter: limited.Limiter, Ctx: ctx}
+			}
+			return &model.FileCloser{File: io.NewSectionReader(reader, httpRange.Start, length)}, nil
 		}),
 	}
 }

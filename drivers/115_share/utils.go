@@ -5,11 +5,13 @@ import (
 	"strconv"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/drivers/base"
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	driver115 "github.com/SheltonZhu/115driver/pkg/driver"
-	"github.com/pkg/errors"
 )
 
 var _ model.Obj = (*FileObj)(nil)
@@ -91,7 +93,7 @@ func (d *Pan115Share) login() error {
 	}
 	d.client = driver115.New(opts...)
 	if _, err := d.client.GetShareSnap(d.ShareCode, d.ReceiveCode, ""); err != nil {
-		return errors.Wrap(err, "failed to get share snap")
+		return errs.Wrap(err, "failed to get share snap")
 	}
 	cr := &driver115.Credential{}
 	if d.QRCodeToken != "" {
@@ -99,13 +101,13 @@ func (d *Pan115Share) login() error {
 			UID: d.QRCodeToken,
 		}
 		if cr, err = d.client.QRCodeLoginWithApp(s, driver115.LoginApp(d.QRCodeSource)); err != nil {
-			return errors.Wrap(err, "failed to login by qrcode")
+			return errs.Wrap(err, "failed to login by qrcode")
 		}
 		d.Cookie = fmt.Sprintf("UID=%s;CID=%s;SEID=%s;KID=%s", cr.UID, cr.CID, cr.SEID, cr.KID)
 		d.QRCodeToken = ""
 	} else if d.Cookie != "" {
 		if err = cr.FromCookie(d.Cookie); err != nil {
-			return errors.Wrap(err, "failed to login by cookies")
+			return errs.Wrap(err, "failed to login by cookies")
 		}
 		d.client.ImportCredential(cr)
 	} else {

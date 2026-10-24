@@ -1,13 +1,13 @@
 package op
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
-	"github.com/pkg/errors"
 )
 
 type DriverConstructor func() driver.Driver
@@ -26,7 +26,7 @@ func RegisterDriver(driver DriverConstructor) {
 func GetDriver(name string) (DriverConstructor, error) {
 	n, ok := driverMap[name]
 	if !ok {
-		return nil, errors.Errorf("no driver named: %s", name)
+		return nil, fmt.Errorf("no driver named: %s", name)
 	}
 	return n, nil
 }

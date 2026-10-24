@@ -1,17 +1,17 @@
 package middlewares
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
-	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	"github.com/gin-gonic/gin"
 )
 
 func StoragesLoaded(c *gin.Context) {
 	if !conf.StoragesLoaded {
-		if utils.SliceContains([]string{"", "/", "/favicon.ico"}, c.Request.URL.Path) {
+		if slices.Contains([]string{"", "/", "/favicon.ico"}, c.Request.URL.Path) {
 			c.Next()
 			return
 		}

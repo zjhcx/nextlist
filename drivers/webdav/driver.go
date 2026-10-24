@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	neturl "net/url"
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/OpenListTeam/OpenList/v4/drivers/base"
@@ -21,8 +23,9 @@ import (
 type WebDav struct {
 	model.Storage
 	Addition
-	client *gowebdav.Client
-	cron   *cron.Cron
+	client   *gowebdav.Client
+	cron     *cron.Cron
+	clientMu sync.RWMutex
 }
 
 func (d *WebDav) Config() driver.Config {
@@ -52,7 +55,7 @@ func (d *WebDav) Drop(ctx context.Context) error {
 }
 
 func (d *WebDav) List(ctx context.Context, dir model.Obj, args model.ListArgs) ([]model.Obj, error) {
-	files, err := d.client.ReadDir(dir.GetPath())
+	files, err := d.requestClient(ctx).ReadDir(dir.GetPath())
 	if err != nil {
 		return nil, err
 	}
@@ -68,13 +71,13 @@ func (d *WebDav) List(ctx context.Context, dir model.Obj, args model.ListArgs) (
 }
 
 func (d *WebDav) Link(ctx context.Context, file model.Obj, args model.LinkArgs) (*model.Link, error) {
-	url, header, err := d.client.Link(file.GetPath())
+	url, header, err := d.requestClient(ctx).Link(file.GetPath())
 	if err != nil {
 		return nil, err
 	}
 	if args.Redirect {
 		// get the url after redirect
-		req := base.NoRedirectClient.R()
+		req := base.NoRedirectClient.R().SetContext(ctx)
 		req.Header = header
 		req.SetDoNotParseResponse(true)
 		res, err := req.Get(url)
@@ -83,7 +86,23 @@ func (d *WebDav) Link(ctx context.Context, file model.Obj, args model.LinkArgs) 
 		}
 		_ = res.RawResponse.Body.Close()
 		if (res.StatusCode() == 302 || res.StatusCode() == 307 || res.StatusCode() == 308) && res.Header().Get("location") != "" {
-			url = res.Header().Get("location")
+			origin, err := neturl.Parse(url)
+			if err != nil {
+				return nil, err
+			}
+			target, err := origin.Parse(res.Header().Get("location"))
+			if err != nil {
+				return nil, err
+			}
+			if (target.Scheme != "http" && target.Scheme != "https") || target.User != nil {
+				return nil, fmt.Errorf("invalid WebDAV redirect")
+			}
+			if !strings.EqualFold(origin.Host, target.Host) || !strings.EqualFold(origin.Scheme, target.Scheme) {
+				header = header.Clone()
+				header.Del("Authorization")
+				header.Del("Cookie")
+			}
+			url = target.String()
 		} else {
 			return nil, fmt.Errorf("redirect failed, status: %d", res.StatusCode())
 		}
@@ -95,23 +114,23 @@ func (d *WebDav) Link(ctx context.Context, file model.Obj, args model.LinkArgs) 
 }
 
 func (d *WebDav) MakeDir(ctx context.Context, parentDir model.Obj, dirName string) error {
-	return d.client.MkdirAll(path.Join(parentDir.GetPath(), dirName), 0644)
+	return d.requestClient(ctx).MkdirAll(path.Join(parentDir.GetPath(), dirName), 0644)
 }
 
 func (d *WebDav) Move(ctx context.Context, srcObj, dstDir model.Obj) error {
-	return d.client.Rename(getPath(srcObj), path.Join(dstDir.GetPath(), srcObj.GetName()), true)
+	return d.requestClient(ctx).Rename(getPath(srcObj), path.Join(dstDir.GetPath(), srcObj.GetName()), true)
 }
 
 func (d *WebDav) Rename(ctx context.Context, srcObj model.Obj, newName string) error {
-	return d.client.Rename(getPath(srcObj), path.Join(path.Dir(srcObj.GetPath()), newName), true)
+	return d.requestClient(ctx).Rename(getPath(srcObj), path.Join(path.Dir(srcObj.GetPath()), newName), true)
 }
 
 func (d *WebDav) Copy(ctx context.Context, srcObj, dstDir model.Obj) error {
-	return d.client.Copy(getPath(srcObj), path.Join(dstDir.GetPath(), srcObj.GetName()), true)
+	return d.requestClient(ctx).Copy(getPath(srcObj), path.Join(dstDir.GetPath(), srcObj.GetName()), true)
 }
 
 func (d *WebDav) Remove(ctx context.Context, obj model.Obj) error {
-	return d.client.RemoveAll(getPath(obj))
+	return d.requestClient(ctx).RemoveAll(getPath(obj))
 }
 
 func (d *WebDav) Put(ctx context.Context, dstDir model.Obj, s model.FileStreamer, up driver.UpdateProgress) error {
@@ -123,18 +142,18 @@ func (d *WebDav) Put(ctx context.Context, dstDir model.Obj, s model.FileStreamer
 		Reader:         s,
 		UpdateProgress: up,
 	})
-	err := d.client.WriteStream(path.Join(dstDir.GetPath(), s.GetName()), reader, 0644, callback)
+	err := d.requestClient(ctx).WriteStream(path.Join(dstDir.GetPath(), s.GetName()), reader, 0644, callback)
 	return err
 }
 
 // implements driver.Getter interface
 func (d *WebDav) Get(ctx context.Context, _path string) (model.Obj, error) {
 	_path = path.Join(d.GetRootPath(), _path)
-	info, err := d.client.Stat(_path)
+	info, err := d.requestClient(ctx).Stat(_path)
 	if err != nil && !gowebdav.IsErrNotFound(err) && !strings.HasSuffix(_path, "/") {
 		// As in RFC 4918 Section 5.2, retry failed slash-less collection PROPFINDs
-                // once with the canonical trailing-slash URL
-		info, err = d.client.Stat(_path + "/")
+		// once with the canonical trailing-slash URL
+		info, err = d.requestClient(ctx).Stat(_path + "/")
 	}
 	if err != nil {
 		if gowebdav.IsErrNotFound(err) {

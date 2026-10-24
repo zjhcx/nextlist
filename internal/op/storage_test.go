@@ -2,13 +2,13 @@ package op_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/db"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
-	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -52,7 +52,7 @@ func TestGetStorageVirtualFilesByPath(t *testing.T) {
 		names = append(names, virtualFile.GetName())
 	}
 	var expectedNames = []string{"b", "c", "d"}
-	if utils.SliceEqual(names, expectedNames) {
+	if slices.Equal(names, expectedNames) {
 		t.Logf("passed")
 	} else {
 		t.Errorf("expected: %+v, got: %+v", expectedNames, names)

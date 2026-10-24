@@ -55,25 +55,16 @@ func SourceExt(path string) string {
 	return ext
 }
 
+var encodePathReplacer = strings.NewReplacer("%", "%25", "?", "%3F", "#", "%23")
+
 func EncodePath(path string, all ...bool) string {
-	seg := strings.Split(path, "/")
-	toReplace := []struct {
-		Src string
-		Dst string
-	}{
-		{Src: "%", Dst: "%25"},
-		{"%", "%25"},
-		{"?", "%3F"},
-		{"#", "%23"},
+	if len(all) == 0 || !all[0] {
+		// "/" is never replaced, so the whole path can be escaped at once
+		return encodePathReplacer.Replace(path)
 	}
+	seg := strings.Split(path, "/")
 	for i := range seg {
-		if len(all) > 0 && all[0] {
-			seg[i] = url.PathEscape(seg[i])
-		} else {
-			for j := range toReplace {
-				seg[i] = strings.ReplaceAll(seg[i], toReplace[j].Src, toReplace[j].Dst)
-			}
-		}
+		seg[i] = url.PathEscape(seg[i])
 	}
 	return strings.Join(seg, "/")
 }

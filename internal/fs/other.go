@@ -5,17 +5,17 @@ import (
 
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
 	"github.com/OpenListTeam/OpenList/v4/internal/task"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
-	"github.com/pkg/errors"
 )
 
 func makeDir(ctx context.Context, path string) error {
 	storage, actualPath, err := op.GetStorageAndActualPath(path)
 	if err != nil {
-		return errors.WithMessage(err, "failed get storage")
+		return errs.Wrap(err, "failed get storage")
 	}
 	return op.MakeDir(ctx, storage, actualPath)
 }
@@ -23,7 +23,7 @@ func makeDir(ctx context.Context, path string) error {
 func rename(ctx context.Context, srcPath, dstName string, skipHook ...bool) error {
 	storage, srcActualPath, err := op.GetStorageAndActualPath(srcPath)
 	if err != nil {
-		return errors.WithMessage(err, "failed get storage")
+		return errs.Wrap(err, "failed get storage")
 	}
 	if utils.IsBool(skipHook...) {
 		ctx = context.WithValue(ctx, conf.SkipHookKey, struct{}{})
@@ -34,7 +34,7 @@ func rename(ctx context.Context, srcPath, dstName string, skipHook ...bool) erro
 func remove(ctx context.Context, path string) error {
 	storage, actualPath, err := op.GetStorageAndActualPath(path)
 	if err != nil {
-		return errors.WithMessage(err, "failed get storage")
+		return errs.Wrap(err, "failed get storage")
 	}
 	return op.Remove(ctx, storage, actualPath)
 }
@@ -42,7 +42,7 @@ func remove(ctx context.Context, path string) error {
 func other(ctx context.Context, args model.FsOtherArgs) (interface{}, error) {
 	storage, actualPath, err := op.GetStorageAndActualPath(args.Path)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed get storage")
+		return nil, errs.Wrap(err, "failed get storage")
 	}
 	args.Path = actualPath
 	return op.Other(ctx, storage, args)

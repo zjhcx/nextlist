@@ -4,13 +4,14 @@ import (
 	"context"
 	stdpath "path"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/fs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
-	"github.com/pkg/errors"
 )
 
 func Mkdir(ctx context.Context, path string) error {
@@ -24,7 +25,7 @@ func Mkdir(ctx context.Context, path string) error {
 	}
 	parentPath := stdpath.Dir(reqPath)
 	parentMeta, err := op.GetNearestMeta(parentPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		return err
 	}
 	if !user.CanWriteContent() && !common.CanWriteContentBypassUserPerms(parentMeta, parentPath) {
@@ -46,7 +47,7 @@ func Remove(ctx context.Context, path string) error {
 		return err
 	}
 	meta, err := op.GetNearestMeta(reqPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		return err
 	}
 	if !common.CanWrite(user, meta, reqPath) {
@@ -71,7 +72,7 @@ func Rename(ctx context.Context, oldPath, newPath string) error {
 	srcDir, srcBase := stdpath.Split(srcPath)
 	dstDir, dstBase := stdpath.Split(dstPath)
 	dstMeta, err := op.GetNearestMeta(dstDir)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		return err
 	}
 	if srcDir == dstDir {
@@ -84,7 +85,7 @@ func Rename(ctx context.Context, oldPath, newPath string) error {
 		return fs.Rename(ctx, srcPath, dstBase)
 	} else {
 		srcMeta, err := op.GetNearestMeta(srcDir)
-		if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+		if err != nil && !errors.Is(err, errs.MetaNotFound) {
 			return err
 		}
 		if !user.CanMove() || !user.CanFTPManage() || (srcBase != dstBase && !user.CanRename()) || !common.CanWrite(user, srcMeta, srcDir) || !common.CanWrite(user, dstMeta, dstDir) {

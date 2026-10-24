@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/cmd/flags"
 	"github.com/OpenListTeam/OpenList/v4/internal/bootstrap/data"
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
@@ -23,7 +25,6 @@ import (
 	ftpserver "github.com/fclairamb/ftpserverlib"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"github.com/quic-go/quic-go/http3"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"

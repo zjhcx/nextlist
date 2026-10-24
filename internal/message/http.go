@@ -3,9 +3,10 @@ package message
 import (
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 )
 
 type Http struct {

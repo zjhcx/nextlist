@@ -2,6 +2,7 @@ package gowebdav
 
 import (
 	"bytes"
+	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -23,8 +24,8 @@ type Client struct {
 	interceptor func(method string, rq *http.Request)
 	c           *http.Client
 
-	authMutex sync.Mutex
-	auth      Authenticator
+	authState *authenticationState
+	ctx       context.Context
 }
 
 // Authenticator stub
@@ -62,7 +63,18 @@ func (n *NoAuth) Authorize(req *http.Request, method string, path string) {
 
 // NewClient creates a new instance of client
 func NewClient(uri, user, pw string) *Client {
-	return &Client{FixSlash(uri), make(http.Header), nil, &http.Client{}, sync.Mutex{}, &NoAuth{user, pw}}
+	return &Client{root: FixSlash(uri), headers: make(http.Header), c: &http.Client{}, authState: &authenticationState{auth: &NoAuth{user, pw}}, ctx: context.Background()}
+}
+
+type authenticationState struct {
+	mu   sync.Mutex
+	auth Authenticator
+}
+
+// WithContext returns a request-local client. Authentication discovery remains
+// shared across clones, while request contexts and headers remain independent.
+func (c *Client) WithContext(ctx context.Context) *Client {
+	return &Client{root: c.root, headers: c.headers.Clone(), interceptor: c.interceptor, c: c.c, authState: c.authState, ctx: ctx}
 }
 
 // SetHeader lets us set arbitrary headers for a given client
@@ -352,7 +364,7 @@ func (c *Client) Read(path string) ([]byte, error) {
 func (c *Client) Link(path string) (string, http.Header, error) {
 	method := "GET"
 	u := PathEscape(Join(c.root, path))
-	r, err := http.NewRequest(method, u, nil)
+	r, err := http.NewRequestWithContext(c.ctx, method, u, nil)
 
 	if err != nil {
 		return "", nil, newPathErrorErr("Link", path, err)
@@ -369,9 +381,9 @@ func (c *Client) Link(path string) (string, http.Header, error) {
 		}
 	}
 
-	c.authMutex.Lock()
-	auth := c.auth
-	c.authMutex.Unlock()
+	c.authState.mu.Lock()
+	auth := c.authState.auth
+	c.authState.mu.Unlock()
 
 	auth.Authorize(r, method, path)
 

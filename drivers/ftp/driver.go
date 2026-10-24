@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/textproto"
 	stdpath "path"
 	"strings"
+	"sync"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
@@ -19,7 +21,9 @@ import (
 type FTP struct {
 	model.Storage
 	Addition
-	conn *ftp.ServerConn
+	conn       *ftp.ServerConn
+	mu         sync.Mutex
+	connCancel context.CancelFunc
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -34,29 +38,46 @@ func (d *FTP) GetAddition() driver.Additional {
 }
 
 func (d *FTP) Init(ctx context.Context) error {
+	if err := d.validate(); err != nil {
+		return err
+	}
 	d.ctx, d.cancel = context.WithCancel(context.Background())
-	var err error
-	d.conn, err = d._login(ctx)
-	return err
+	release, err := d.acquire(ctx)
+	if err != nil {
+		d.cancel()
+		return err
+	}
+	release()
+	return nil
 }
 
 func (d *FTP) Drop(ctx context.Context) error {
+	if d.cancel != nil {
+		d.cancel()
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.connCancel != nil {
+		d.connCancel()
+		d.connCancel = nil
+	}
 	if d.conn != nil {
 		_ = d.conn.Quit()
-		d.cancel()
+		d.conn = nil
 	}
 	return nil
 }
 
 func (d *FTP) List(ctx context.Context, dir model.Obj, args model.ListArgs) ([]model.Obj, error) {
-	if err := d.login(); err != nil {
+	release, err := d.acquire(ctx)
+	if err != nil {
 		return nil, err
 	}
+	defer release()
 
 	path := encode(dir.GetPath(), d.Encoding)
 
 	var entries []*ftp.Entry
-	var err error
 
 	if d.CwdList {
 		origDir, cwdErr := d.conn.CurrentDir()
@@ -68,6 +89,7 @@ func (d *FTP) List(ctx context.Context, dir model.Obj, args model.ListArgs) ([]m
 		}
 		entries, err = d.conn.List("")
 		if restoreErr := d.conn.ChangeDir(origDir); restoreErr != nil {
+			d.connCancel()
 			d.conn = nil
 		}
 	} else {
@@ -97,63 +119,83 @@ func (d *FTP) List(ctx context.Context, dir model.Obj, args model.ListArgs) ([]m
 }
 
 func (d *FTP) Link(ctx context.Context, file model.Obj, args model.LinkArgs) (*model.Link, error) {
-	conn, err := d._login(ctx)
-	if err != nil {
+	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-
-	path := encode(file.GetPath(), d.Encoding)
+	remotePath := encode(file.GetPath(), d.Encoding)
 	size := file.GetSize()
-	resultRangeReader := func(context context.Context, httpRange http_range.Range) (io.ReadCloser, error) {
-		length := httpRange.Length
-		if length < 0 || httpRange.Start+length > size {
-			length = size - httpRange.Start
+	reader := func(ctx context.Context, r http_range.Range) (io.ReadCloser, error) {
+		if size < 0 || r.Start < 0 || r.Length < -1 {
+			return nil, http_range.ErrInvalid
 		}
-		var c *ftp.ServerConn
-		if ctx == context {
-			c = conn
-		} else {
-			var err error
-			c, err = d._login(context)
-			if err != nil {
-				return nil, err
-			}
+		if r.Start > size || (size > 0 && r.Start == size) {
+			return nil, http_range.ErrNoOverlap
 		}
-		resp, err := c.RetrFrom(path, uint64(httpRange.Start))
+		length := r.Length
+		if length < 0 || length > size-r.Start {
+			length = size - r.Start
+		}
+		if length == 0 {
+			return io.NopCloser(strings.NewReader("")), nil
+		}
+		conn, closeConn, err := d.connect(ctx)
 		if err != nil {
 			return nil, err
 		}
-		var close utils.CloseFunc
-		if context == ctx {
-			close = resp.Close
-		} else {
-			close = func() error {
-				return errors.Join(resp.Close(), c.Quit())
-			}
+		resp, err := conn.RetrFrom(remotePath, uint64(r.Start))
+		if err != nil {
+			closeConn()
+			return nil, err
 		}
-		return utils.ReadCloser{
-			Reader: io.LimitReader(resp, length),
-			Closer: close,
-		}, nil
+		var once sync.Once
+		closeReader := func() error {
+			var closeErr error
+			once.Do(func() { closeErr = resp.Close(); closeConn() })
+			return closeErr
+		}
+		return utils.ReadCloser{Reader: io.LimitReader(resp, length), Closer: utils.CloseFunc(closeReader)}, nil
 	}
+	return &model.Link{RangeReader: stream.RateLimitRangeReaderFunc(reader)}, nil
+}
 
-	return &model.Link{
-		RangeReader: stream.RateLimitRangeReaderFunc(resultRangeReader),
-		SyncClosers: utils.NewSyncClosers(utils.CloseFunc(conn.Quit)),
-	}, nil
+// MLST is optional. Let OpenList resolve through the parent listing when the
+// server lacks it or returns an ambiguous 550 (missing or inaccessible).
+func (d *FTP) Get(ctx context.Context, p string) (model.Obj, error) {
+	release, err := d.acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+	p = stdpath.Join(d.RootFolderPath, p)
+	entry, err := d.conn.GetEntry(encode(p, d.Encoding))
+	if err != nil {
+		var protocolErr *textproto.Error
+		if errors.As(err, &protocolErr) && (protocolErr.Code == 500 || protocolErr.Code == 501 || protocolErr.Code == 502 || protocolErr.Code == 504 || protocolErr.Code == 550) {
+			return nil, errs.NotImplement
+		}
+		return nil, err
+	}
+	if entry.Type == ftp.EntryTypeLink {
+		return nil, errs.NotImplement
+	}
+	return &model.Object{Name: stdpath.Base(p), Path: p, Size: int64(entry.Size), Modified: entry.Time, IsFolder: entry.Type == ftp.EntryTypeFolder}, nil
 }
 
 func (d *FTP) MakeDir(ctx context.Context, parentDir model.Obj, dirName string) error {
-	if err := d.login(); err != nil {
+	release, err := d.acquire(ctx)
+	if err != nil {
 		return err
 	}
+	defer release()
 	return d.conn.MakeDir(encode(stdpath.Join(parentDir.GetPath(), dirName), d.Encoding))
 }
 
 func (d *FTP) Move(ctx context.Context, srcObj, dstDir model.Obj) error {
-	if err := d.login(); err != nil {
+	release, err := d.acquire(ctx)
+	if err != nil {
 		return err
 	}
+	defer release()
 	return d.conn.Rename(
 		encode(srcObj.GetPath(), d.Encoding),
 		encode(stdpath.Join(dstDir.GetPath(), srcObj.GetName()), d.Encoding),
@@ -161,9 +203,11 @@ func (d *FTP) Move(ctx context.Context, srcObj, dstDir model.Obj) error {
 }
 
 func (d *FTP) Rename(ctx context.Context, srcObj model.Obj, newName string) error {
-	if err := d.login(); err != nil {
+	release, err := d.acquire(ctx)
+	if err != nil {
 		return err
 	}
+	defer release()
 	return d.conn.Rename(
 		encode(srcObj.GetPath(), d.Encoding),
 		encode(stdpath.Join(stdpath.Dir(srcObj.GetPath()), newName), d.Encoding),
@@ -175,9 +219,11 @@ func (d *FTP) Copy(ctx context.Context, srcObj, dstDir model.Obj) error {
 }
 
 func (d *FTP) Remove(ctx context.Context, obj model.Obj) error {
-	if err := d.login(); err != nil {
+	release, err := d.acquire(ctx)
+	if err != nil {
 		return err
 	}
+	defer release()
 	path := encode(obj.GetPath(), d.Encoding)
 	if obj.IsDir() {
 		return d.conn.RemoveDirRecur(path)
@@ -187,14 +233,18 @@ func (d *FTP) Remove(ctx context.Context, obj model.Obj) error {
 }
 
 func (d *FTP) Put(ctx context.Context, dstDir model.Obj, s model.FileStreamer, up driver.UpdateProgress) error {
-	if err := d.login(); err != nil {
+	conn, closeConn, err := d.connect(ctx)
+	if err != nil {
 		return err
 	}
-	path := stdpath.Join(dstDir.GetPath(), s.GetName())
-	return d.conn.Stor(encode(path, d.Encoding), driver.NewLimitedUploadStream(ctx, &driver.ReaderUpdatingProgress{
-		Reader:         s,
-		UpdateProgress: up,
-	}))
+	defer closeConn()
+	p := stdpath.Join(dstDir.GetPath(), s.GetName())
+	err = conn.Stor(encode(p, d.Encoding), driver.NewLimitedUploadStream(ctx, &driver.ReaderUpdatingProgress{Reader: s, UpdateProgress: up}))
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	return err
 }
 
 var _ driver.Driver = (*FTP)(nil)
+var _ driver.Getter = (*FTP)(nil)

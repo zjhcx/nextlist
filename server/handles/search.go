@@ -3,6 +3,8 @@ package handles
 import (
 	"path"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
@@ -11,7 +13,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 )
 
 type SearchReq struct {
@@ -66,7 +67,7 @@ func isSearchNodeAccessible(user *model.User, node model.SearchNode, password st
 		metaPath = nodePath
 	}
 	meta, err := resolveMeta(metaPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		return false
 	}
 	return common.CanAccess(user, meta, nodePath, password)

@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
@@ -24,7 +26,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	"github.com/OpenListTeam/tache"
-	"github.com/pkg/errors"
 )
 
 // MaxSeedGenerateSyncSize bounds synchronous seed generation (1GB). Larger
@@ -42,7 +43,7 @@ func SeedGenerateNeedsAsync(ctx context.Context, user *model.User, paths []strin
 			return false, err
 		}
 		meta, metaErr := op.GetNearestMeta(fullPath)
-		if metaErr != nil && !errors.Is(errors.Cause(metaErr), errs.MetaNotFound) {
+		if metaErr != nil && !errors.Is(metaErr, errs.MetaNotFound) {
 			return false, metaErr
 		}
 		if !common.CanRead(user, meta, fullPath) {
@@ -383,7 +384,7 @@ func GenerateSeedArtifacts(ctx context.Context, user *model.User, params SeedGen
 			return nil, nil, err
 		}
 		meta, err := op.GetNearestMeta(fullPath)
-		if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+		if err != nil && !errors.Is(err, errs.MetaNotFound) {
 			return nil, nil, err
 		}
 		if !common.CanRead(user, meta, fullPath) {
@@ -525,7 +526,7 @@ func GenerateSeedArtifacts(ctx context.Context, user *model.User, params SeedGen
 			return artifact, err
 		}
 		meta, metaErr := op.GetNearestMeta(dstDir)
-		if metaErr != nil && !errors.Is(errors.Cause(metaErr), errs.MetaNotFound) {
+		if metaErr != nil && !errors.Is(metaErr, errs.MetaNotFound) {
 			return artifact, metaErr
 		}
 		if (!user.CanWriteContent() && !common.CanWriteContentBypassUserPerms(meta, dstDir)) || !common.CanWrite(user, meta, dstDir) {

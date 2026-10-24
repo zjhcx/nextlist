@@ -6,8 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"errors"
+
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/antchfx/xpath"
-	"github.com/pkg/errors"
 )
 
 var units = map[string]int64{
@@ -110,7 +112,7 @@ func parseTime(res any, format string) (time.Time, error) {
 	s = strings.TrimSpace(s)
 	t, err := time.Parse(format, s)
 	if err != nil {
-		return time.Now(), errors.WithMessagef(err, "failed to convert %s to time", s)
+		return time.Now(), errs.Wrapf(err, "failed to convert %s to time", s)
 	}
 	return t, nil
 }

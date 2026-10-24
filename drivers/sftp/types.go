@@ -1,6 +1,7 @@
 package sftp
 
 import (
+	"github.com/pkg/sftp"
 	"os"
 	stdpath "path"
 	"strings"
@@ -9,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (d *SFTP) fileToObj(f os.FileInfo, dir string) (model.Obj, error) {
+func (d *SFTP) fileToObj(client *sftp.Client, f os.FileInfo, dir string) (model.Obj, error) {
 	symlink := f.Mode()&os.ModeSymlink != 0
 	path := stdpath.Join(dir, f.Name())
 	if !symlink {
@@ -22,14 +23,14 @@ func (d *SFTP) fileToObj(f os.FileInfo, dir string) (model.Obj, error) {
 		}, nil
 	}
 	// set target path
-	target, err := d.client.ReadLink(path)
+	target, err := client.ReadLink(path)
 	if err != nil {
 		return nil, err
 	}
 	if !strings.HasPrefix(target, "/") {
 		target = stdpath.Join(dir, target)
 	}
-	_f, err := d.client.Stat(target)
+	_f, err := client.Stat(target)
 	if err != nil {
 		if d.IgnoreSymlinkError {
 			return &model.Object{
@@ -48,7 +49,7 @@ func (d *SFTP) fileToObj(f os.FileInfo, dir string) (model.Obj, error) {
 		Size:     _f.Size(),
 		Modified: _f.ModTime(),
 		IsFolder: _f.IsDir(),
-		Path:     target,
+		Path:     path,
 	}
 	log.Debugf("[sftp] obj: %+v, is symlink: %v", obj, symlink)
 	return obj, nil

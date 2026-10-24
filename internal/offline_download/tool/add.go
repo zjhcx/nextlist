@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"errors"
+
 	_115 "github.com/OpenListTeam/OpenList/v4/drivers/115"
 	_115_open "github.com/OpenListTeam/OpenList/v4/drivers/115_open"
 	_123 "github.com/OpenListTeam/OpenList/v4/drivers/123"
@@ -26,7 +28,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/internal/setting"
 	"github.com/OpenListTeam/OpenList/v4/internal/task"
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 )
 
 type DeletePolicy string
@@ -50,22 +51,22 @@ func AddURL(ctx context.Context, args *AddURLArgs) (task.TaskExtensionInfo, erro
 	// check storage
 	storage, dstDirActualPath, err := op.GetStorageAndActualPath(args.DstDirPath)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed get storage")
+		return nil, errs.Wrap(err, "failed get storage")
 	}
 	// check is it could upload
 	if storage.Config().NoUpload {
-		return nil, errors.WithStack(errs.UploadNotSupported)
+		return nil, errs.UploadNotSupported
 	}
 	// check path is valid
 	obj, err := op.Get(ctx, storage, dstDirActualPath)
 	if err != nil {
 		if !errs.IsObjectNotFound(err) {
-			return nil, errors.WithMessage(err, "failed get object")
+			return nil, errs.Wrap(err, "failed get object")
 		}
 	} else {
 		if !obj.IsDir() {
 			// can't add to a file
-			return nil, errors.WithStack(errs.NotFolder)
+			return nil, errs.NotFolder
 		}
 	}
 	// try putting url
@@ -101,13 +102,13 @@ func AddURL(ctx context.Context, args *AddURLArgs) (task.TaskExtensionInfo, erro
 	// get tool
 	tool, err := Tools.Get(args.Tool)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed get offline download tool")
+		return nil, errs.Wrapf(err, "failed get offline download tool")
 	}
 	// check tool is ready
 	if !tool.IsReady() {
 		// try to init tool
 		if _, err := tool.Init(); err != nil {
-			return nil, errors.Wrapf(err, "failed init offline download tool %s", args.Tool)
+			return nil, errs.Wrapf(err, "failed init offline download tool %s", args.Tool)
 		}
 	}
 

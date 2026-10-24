@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
-	"github.com/pkg/errors"
 )
 
 func TestTask_Manager(t *testing.T) {

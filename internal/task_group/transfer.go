@@ -7,11 +7,11 @@ import (
 
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
 	"github.com/OpenListTeam/OpenList/v4/internal/setting"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
@@ -24,7 +24,7 @@ type DstPathToHook string
 func HookAndRemove(ctx context.Context, dstPath string, payloads ...any) {
 	dstStorage, dstActualPath, err := op.GetStorageAndActualPath(dstPath)
 	if err != nil {
-		log.Error(errors.WithMessage(err, "failed get dst storage"))
+		log.Error(errs.Wrap(err, "failed get dst storage"))
 		return
 	}
 	dstNeedHandleHook := setting.GetBool(conf.HandleHookAfterWriting)
@@ -61,7 +61,7 @@ func HookAndRemove(ctx context.Context, dstPath string, payloads ...any) {
 		case SrcPathToRemove:
 			srcStorage, srcActualPath, err := op.GetStorageAndActualPath(string(p))
 			if err != nil {
-				log.Error(errors.WithMessage(err, "failed get src storage"))
+				log.Error(errs.Wrap(err, "failed get src storage"))
 				continue
 			}
 			err = verifyAndRemove(ctx, srcStorage, dstStorage, srcActualPath, dstActualPath)
@@ -75,13 +75,13 @@ func HookAndRemove(ctx context.Context, dstPath string, payloads ...any) {
 func verifyAndRemove(ctx context.Context, srcStorage, dstStorage driver.Driver, srcPath, dstPath string) error {
 	srcObj, err := op.GetUnwrap(ctx, srcStorage, srcPath)
 	if err != nil {
-		return errors.WithMessagef(err, "failed get src [%s] file", path.Join(srcStorage.GetStorage().MountPath, srcPath))
+		return errs.Wrapf(err, "failed get src [%s] file", path.Join(srcStorage.GetStorage().MountPath, srcPath))
 	}
 
 	dstObjPath := path.Join(dstPath, srcObj.GetName())
 	dstObj, err := op.GetUnwrap(ctx, dstStorage, dstObjPath)
 	if err != nil {
-		return errors.WithMessagef(err, "failed get dst [%s] file", path.Join(dstStorage.GetStorage().MountPath, dstObjPath))
+		return errs.Wrapf(err, "failed get dst [%s] file", path.Join(dstStorage.GetStorage().MountPath, dstObjPath))
 	}
 
 	if !dstObj.IsDir() {
@@ -95,7 +95,7 @@ func verifyAndRemove(ctx context.Context, srcStorage, dstStorage driver.Driver, 
 	// Verify directory
 	srcObjs, err := op.List(ctx, srcStorage, srcPath, model.ListArgs{})
 	if err != nil {
-		return errors.WithMessagef(err, "failed list src [%s] objs", path.Join(srcStorage.GetStorage().MountPath, srcPath))
+		return errs.Wrapf(err, "failed list src [%s] objs", path.Join(srcStorage.GetStorage().MountPath, srcPath))
 	}
 
 	hasErr := false
@@ -108,7 +108,7 @@ func verifyAndRemove(ctx context.Context, srcStorage, dstStorage driver.Driver, 
 		}
 	}
 	if hasErr {
-		return errors.Errorf("some subitems of [%s] failed to verify and remove", path.Join(srcStorage.GetStorage().MountPath, srcPath))
+		return fmt.Errorf("some subitems of [%s] failed to verify and remove", path.Join(srcStorage.GetStorage().MountPath, srcPath))
 	}
 	err = op.Remove(ctx, srcStorage, srcPath)
 	if err != nil {

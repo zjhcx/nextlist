@@ -18,7 +18,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/internal/setting"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/hekmon/transmissionrpc/v3"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -47,16 +46,16 @@ func (t *Transmission) Init() (string, error) {
 	uri := setting.GetStr(conf.TransmissionUri)
 	endpoint, err := url.Parse(uri)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to init transmission client")
+		return "", errs.Wrap(err, "failed to init transmission client")
 	}
 	c, err := transmissionrpc.New(endpoint, nil)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to init transmission client")
+		return "", errs.Wrap(err, "failed to init transmission client")
 	}
 
 	ok, serverVersion, serverMinimumVersion, err := c.RPCVersion(context.Background())
 	if err != nil {
-		return "", errors.Wrapf(err, "failed get transmission version")
+		return "", errs.Wrapf(err, "failed get transmission version")
 	}
 
 	if !ok {
@@ -78,7 +77,7 @@ func (t *Transmission) IsReady() bool {
 func (t *Transmission) AddURL(args *tool.AddUrlArgs) (string, error) {
 	endpoint, err := url.Parse(args.Url)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to parse transmission uri")
+		return "", errs.Wrap(err, "failed to parse transmission uri")
 	}
 
 	rpcPayload := transmissionrpc.TorrentAddPayload{
@@ -93,18 +92,18 @@ func (t *Transmission) AddURL(args *tool.AddUrlArgs) (string, error) {
 			args.Url,
 		)
 		if err != nil {
-			return "", errors.Wrap(err, "failed to get .torrent file")
+			return "", errs.Wrap(err, "failed to get .torrent file")
 		}
 		defer resp.Body.Close()
 		buffer := new(bytes.Buffer)
 		encoder := base64.NewEncoder(base64.StdEncoding, buffer)
 		// Stream file to the encoder
 		if _, err = utils.CopyWithBuffer(encoder, resp.Body); err != nil {
-			return "", errors.Wrap(err, "can't copy file content into the base64 encoder")
+			return "", errs.Wrap(err, "can't copy file content into the base64 encoder")
 		}
 		// Flush last bytes
 		if err = encoder.Close(); err != nil {
-			return "", errors.Wrap(err, "can't flush last bytes of the base64 encoder")
+			return "", errs.Wrap(err, "can't flush last bytes of the base64 encoder")
 		}
 		// Get the string form
 		b64 := buffer.String()
@@ -170,9 +169,9 @@ func (t *Transmission) Status(task *tool.DownloadTask) (*tool.Status, error) {
 		transmissionrpc.TorrentStatusSeed:
 		s.Completed = true
 	case transmissionrpc.TorrentStatusStopped:
-		s.Err = errors.Errorf("[transmission] failed to download %s, status: %s, error: %s", task.GID, info.Status.String(), *info.ErrorString)
+		s.Err = fmt.Errorf("[transmission] failed to download %s, status: %s, error: %s", task.GID, info.Status.String(), *info.ErrorString)
 	default:
-		s.Err = errors.Errorf("[transmission] unknown status occurred downloading %s, err: %s", task.GID, *info.ErrorString)
+		s.Err = fmt.Errorf("[transmission] unknown status occurred downloading %s, err: %s", task.GID, *info.ErrorString)
 	}
 	return s, nil
 }

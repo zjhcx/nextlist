@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"strings"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
 	"github.com/OpenListTeam/OpenList/v4/internal/setting"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils/random"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/ldap.v3"
 )
@@ -30,7 +32,7 @@ func HandleLdapLogin(username, password string) error {
 	// Connect to LdapServer
 	l, err := dial(ldapServer, skipTlsVerify)
 	if err != nil {
-		return errors.WithMessagef(err, "failed to connect to LDAP")
+		return errs.Wrapf(err, "failed to connect to LDAP")
 	}
 	defer l.Close()
 
@@ -38,7 +40,7 @@ func HandleLdapLogin(username, password string) error {
 	if ldapManagerDN != "" && ldapManagerPassword != "" {
 		err = l.Bind(ldapManagerDN, ldapManagerPassword)
 		if err != nil {
-			return errors.WithMessagef(err, "failed to bind to LDAP")
+			return errs.Wrapf(err, "failed to bind to LDAP")
 		}
 	}
 
@@ -52,7 +54,7 @@ func HandleLdapLogin(username, password string) error {
 	)
 	sr, err := l.Search(searchRequest)
 	if err != nil {
-		return errors.WithMessagef(err, "failed login ldap: LDAP search failed")
+		return errs.Wrapf(err, "failed login ldap: LDAP search failed")
 	}
 	if len(sr.Entries) != 1 {
 		return errors.New("failed login ldap: user does not exist or too many entries returned")
@@ -62,7 +64,7 @@ func HandleLdapLogin(username, password string) error {
 	// Bind as the user to verify their password
 	err = l.Bind(userDN, password)
 	if err != nil {
-		return errors.WithMessagef(ErrFailedLdapAuth, "%v", err)
+		return errs.Wrapf(ErrFailedLdapAuth, "%v", err)
 	}
 	log.Infof("LDAP auth successful for %s", username)
 	// Auth finished

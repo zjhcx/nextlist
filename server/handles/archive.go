@@ -6,6 +6,8 @@ import (
 	stdpath "path"
 	"strings"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/archive/tool"
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
@@ -18,7 +20,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -101,7 +102,7 @@ func FsArchiveMeta(c *gin.Context, req *ArchiveMetaReq, user *model.User) {
 		return
 	}
 	meta, err := op.GetNearestMeta(reqPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		common.ErrorResp(c, err, 500, true)
 		return
 	}
@@ -184,7 +185,7 @@ func FsArchiveList(c *gin.Context, req *ArchiveListReq, user *model.User) {
 		return
 	}
 	meta, err := op.GetNearestMeta(reqPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		common.ErrorResp(c, err, 500, true)
 		return
 	}
@@ -261,7 +262,7 @@ func FsArchiveDecompress(c *gin.Context) {
 		return
 	}
 	dstMeta, err := op.GetNearestMeta(dstDir)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		common.ErrorResp(c, err, 500, true)
 		return
 	}

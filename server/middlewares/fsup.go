@@ -4,13 +4,14 @@ import (
 	"net/url"
 	stdpath "path"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 )
 
 func FsUp(c *gin.Context) {
@@ -29,7 +30,7 @@ func FsUp(c *gin.Context) {
 	}
 	parentPath := stdpath.Dir(path)
 	parentMeta, err := op.GetNearestMeta(parentPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		common.ErrorResp(c, err, 500, true)
 		c.Abort()
 		return

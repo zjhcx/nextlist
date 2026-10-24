@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
@@ -140,17 +141,17 @@ func CreateTempFile(r io.Reader, size int64) (*os.File, error) {
 
 // GetFileType get file type
 func GetFileType(filename string) int {
-	ext := strings.ToLower(Ext(filename))
-	if SliceContains(conf.SlicesMap[conf.AudioTypes], ext) {
+	ext := Ext(filename)
+	if slices.Contains(conf.SlicesMap[conf.AudioTypes], ext) {
 		return conf.AUDIO
 	}
-	if SliceContains(conf.SlicesMap[conf.VideoTypes], ext) {
+	if slices.Contains(conf.SlicesMap[conf.VideoTypes], ext) {
 		return conf.VIDEO
 	}
-	if SliceContains(conf.SlicesMap[conf.ImageTypes], ext) {
+	if slices.Contains(conf.SlicesMap[conf.ImageTypes], ext) {
 		return conf.IMAGE
 	}
-	if SliceContains(conf.SlicesMap[conf.TextTypes], ext) {
+	if slices.Contains(conf.SlicesMap[conf.TextTypes], ext) {
 		return conf.TEXT
 	}
 	return conf.UNKNOWN

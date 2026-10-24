@@ -7,7 +7,10 @@ import (
 	"net/http"
 	"net/url"
 	stdpath "path"
+	"slices"
 	"time"
+
+	"errors"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
@@ -20,7 +23,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 )
 
 type fsLinkArgs struct {
@@ -67,7 +69,7 @@ func (s *Server) callFSLink(c *gin.Context, raw json.RawMessage) (any, *rpcError
 	}
 
 	meta, err := op.GetNearestMeta(reqPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		return nil, &rpcError{Code: -32603, Message: err.Error()}
 	}
 	if !common.CanAccess(user, meta, reqPath, args.Password) {
@@ -163,10 +165,10 @@ func canProxyFile(storage driver.Driver, filename string) bool {
 	if storage.Config().MustProxy() || storage.GetStorage().WebProxy {
 		return true
 	}
-	if utils.SliceContains(conf.SlicesMap[conf.ProxyTypes], utils.Ext(filename)) {
+	if slices.Contains(conf.SlicesMap[conf.ProxyTypes], utils.Ext(filename)) {
 		return true
 	}
-	if utils.SliceContains(conf.SlicesMap[conf.TextTypes], utils.Ext(filename)) {
+	if slices.Contains(conf.SlicesMap[conf.TextTypes], utils.Ext(filename)) {
 		return true
 	}
 	return false

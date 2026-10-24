@@ -2,8 +2,6 @@ package errs
 
 import (
 	"errors"
-
-	pkgerr "github.com/pkg/errors"
 )
 
 var (
@@ -15,9 +13,9 @@ var (
 )
 
 func IsObjectNotFound(err error) bool {
-	return errors.Is(pkgerr.Cause(err), ObjectNotFound)
+	return errors.Is(err, ObjectNotFound)
 }
 
 func IsObjectAlreadyExists(err error) bool {
-	return errors.Is(pkgerr.Cause(err), ObjectAlreadyExists)
+	return errors.Is(err, ObjectAlreadyExists)
 }

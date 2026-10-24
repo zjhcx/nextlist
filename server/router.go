@@ -1,13 +1,14 @@
 package server
 
 import (
+	"slices"
+
 	"github.com/OpenListTeam/OpenList/v4/cmd/flags"
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/message"
 	multipartPkg "github.com/OpenListTeam/OpenList/v4/internal/multipart"
 	"github.com/OpenListTeam/OpenList/v4/internal/sign"
 	"github.com/OpenListTeam/OpenList/v4/internal/stream"
-	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	"github.com/OpenListTeam/OpenList/v4/server/handles"
 	"github.com/OpenListTeam/OpenList/v4/server/middlewares"
@@ -18,7 +19,7 @@ import (
 
 func Init(e *gin.Engine) {
 	e.ContextWithFallback = true
-	if !utils.SliceContains([]string{"", "/"}, conf.URL.Path) {
+	if !slices.Contains([]string{"", "/"}, conf.URL.Path) {
 		e.GET("/", func(c *gin.Context) {
 			c.Redirect(302, conf.URL.Path)
 		})

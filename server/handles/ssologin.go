@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"slices"
 	"strings"
 	"time"
 
@@ -98,7 +99,7 @@ func generateSSOBindingToken(c *gin.Context, purpose, ssoID string) (string, err
 		c.SetCookie(
 			ssoBindingCookie,
 			session,
-			int((stateExpire+ssoBindingExpire).Seconds()),
+			int((stateExpire + ssoBindingExpire).Seconds()),
 			path.Join(conf.URL.Path, "/api"),
 			"",
 			strings.HasPrefix(common.GetApiUrl(c), "https://"),
@@ -422,7 +423,7 @@ func SSOLoginCallback(c *gin.Context) {
 	if usecompatibility {
 		argument = path.Base(c.Request.URL.Path)
 	}
-	if !utils.SliceContains([]string{"get_sso_id", "sso_get_token"}, argument) {
+	if !slices.Contains([]string{"get_sso_id", "sso_get_token"}, argument) {
 		common.ErrorResp(c, errors.New("invalid request"), 500)
 		return
 	}
@@ -533,7 +534,7 @@ func SSOLoginCallback(c *gin.Context) {
 		return
 	}
 	userID := utils.Json.Get(resp.Body(), idField).ToString()
-	if utils.SliceContains([]string{"", "0"}, userID) {
+	if slices.Contains([]string{"", "0"}, userID) {
 		common.ErrorResp(c, errors.New("error occurred"), 400)
 		return
 	}

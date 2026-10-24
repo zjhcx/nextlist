@@ -10,16 +10,19 @@ import (
 	"mime/multipart"
 	gonet "net"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/pkg/http_range"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -276,7 +279,7 @@ func ProcessHeader(origin, override http.Header) http.Header {
 		if _, unsafe := unsafeProxyHeaders[lower]; unsafe {
 			continue
 		}
-		if utils.SliceContains(conf.SlicesMap[conf.ProxyIgnoreHeaders], lower) {
+		if slices.Contains(conf.SlicesMap[conf.ProxyIgnoreHeaders], lower) {
 			continue
 		}
 		result[h] = val
@@ -369,7 +372,7 @@ func (t *safeTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	host := req.URL.Hostname()
 	addrs, err := gonet.DefaultResolver.LookupIPAddr(req.Context(), host)
 	if err != nil || len(addrs) == 0 {
-		return nil, errors.Wrapf(err, "failed to resolve host: %s", host)
+		return nil, errs.Wrapf(err, "failed to resolve host: %s", host)
 	}
 	for _, addr := range addrs {
 		if isCloudMetadataIP(addr.IP) {

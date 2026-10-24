@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -109,7 +110,7 @@ func (d *ILanZou) request(pathname, method string, callback base.ReqCallback, pr
 	code := utils.Json.Get(body, "code").ToInt()
 	msg := utils.Json.Get(body, "msg").ToString()
 	if code != 200 {
-		if !isRetry && proved && (utils.SliceContains([]int{-1, -2}, code) || d.Token == "") {
+		if !isRetry && proved && (slices.Contains([]int{-1, -2}, code) || d.Token == "") {
 			if err := d.login(); err != nil {
 				return nil, err
 			}

@@ -7,6 +7,8 @@ import (
 	stdpath "path"
 	"strings"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/fs"
@@ -18,7 +20,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	"github.com/OpenListTeam/OpenList/v4/server/handles"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 )
 
 type fsGetArgs struct {
@@ -46,7 +47,7 @@ func (s *Server) callFSGet(c *gin.Context, raw json.RawMessage) (any, *rpcError)
 	}
 
 	meta, err := op.GetNearestMeta(reqPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		return nil, &rpcError{Code: -32603, Message: err.Error()}
 	}
 	if !common.CanAccess(user, meta, reqPath, args.Password) {

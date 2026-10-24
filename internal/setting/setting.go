@@ -26,7 +26,8 @@ func GetInt(key string, defaultVal int) int {
 }
 
 func GetBool(key string) bool {
-	return GetStr(key) == "true" || GetStr(key) == "1"
+	v := GetStr(key)
+	return v == "true" || v == "1"
 }
 
 func GetFloat(key string, defaultVal float64) float64 {

@@ -34,11 +34,15 @@ func (d *DigestAuth) Pass() string {
 
 // Authorize the current request
 func (d *DigestAuth) Authorize(req *http.Request, method string, path string) {
-	d.digestParts["uri"] = path
-	d.digestParts["method"] = method
-	d.digestParts["username"] = d.user
-	d.digestParts["password"] = d.pw
-	req.Header.Set("Authorization", getDigestAuthorization(d.digestParts))
+	parts := make(map[string]string, len(d.digestParts)+4)
+	for key, value := range d.digestParts {
+		parts[key] = value
+	}
+	parts["uri"] = path
+	parts["method"] = method
+	parts["username"] = d.user
+	parts["password"] = d.pw
+	req.Header.Set("Authorization", getDigestAuthorization(parts))
 }
 
 func digestParts(resp *http.Response) map[string]string {
@@ -49,8 +53,12 @@ func digestParts(resp *http.Response) map[string]string {
 		for r := range responseHeaders {
 			for _, w := range wantedHeaders {
 				if strings.Contains(r, w) {
+					pair := strings.SplitN(r, `=`, 2)
+					if len(pair) != 2 {
+						continue
+					}
 					result[w] = strings.Trim(
-						strings.SplitN(r, `=`, 2)[1],
+						pair[1],
 						`"`,
 					)
 				}

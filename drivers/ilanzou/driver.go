@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -176,7 +177,7 @@ func (d *ILanZou) Link(ctx context.Context, file model.Obj, args model.LinkArgs)
 		return nil, err
 	}
 	location := res.Header().Get("location")
-	if location != "" && utils.SliceContains([]int{http.StatusMovedPermanently, http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect, http.StatusPermanentRedirect}, res.StatusCode()) {
+	if location != "" && slices.Contains([]int{http.StatusMovedPermanently, http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect, http.StatusPermanentRedirect}, res.StatusCode()) {
 		realURL = location
 	} else if res.StatusCode() == http.StatusOK && location != "" {
 		realURL = location

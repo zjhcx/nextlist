@@ -1,0 +1,201 @@
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-corner,
+::-webkit-scrollbar-track {
+  background-color: #e2e2e2;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 2px;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+::-webkit-scrollbar-button:vertical {
+  display: none;
+}
+
+::-webkit-scrollbar-thumb:vertical:hover {
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+::-webkit-scrollbar-thumb:vertical:active {
+  background-color: rgba(0, 0, 0, 0.38);
+}
+
+/* dark */
+
+.hope-ui-dark ::-webkit-scrollbar-corner,
+.hope-ui-dark ::-webkit-scrollbar-track {
+  background-color: rgb(15, 15, 15);
+}
+
+.hope-ui-dark ::-webkit-scrollbar-thumb {
+  background-color: #2d2d2d;
+}
+
+.hope-ui-dark ::-webkit-scrollbar-thumb:vertical:hover {
+  background-color: rgb(58, 58, 58);
+}
+
+.hope-ui-dark ::-webkit-scrollbar-thumb:vertical:active {
+  background-color: rgb(58, 58, 58);
+}
+
+.hope-select__option {
+  flex-shrink: 0;
+}
+
+/* Fixes: https://github.com/OpenListTeam/OpenList-Frontend/issues/26 */
+.hope-notification__list {
+  width: unset;
+}
+
+/* Shared glass surfaces; browsers without backdrop filters use opaque panels. */
+:root {
+  --card-opacity: 100%;
+  --component-opacity: 100%;
+  --glass-blur: 0px;
+  --glass-rgb: 255, 255, 255;
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+}
+.hope-ui-dark {
+  --glass-rgb: 38, 38, 38;
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
+}
+#root { isolation: isolate; min-height: 100vh; }
+.appearance-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-position: center;
+  background-size: cover;
+  background-color: #f0f0f0;
+}
+.hope-ui-dark .appearance-background { background-color: #1c1c1c; }
+#root .header, #root .obj-box, #root .nav,
+.hope-modal__content, .hope-drawer__content, .hope-menu__content, .hope-select__content {
+  background: rgba(var(--glass-rgb), var(--card-opacity)) !important;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: 24px;
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  #root .header, #root .obj-box, #root .nav,
+  .hope-modal__content, .hope-drawer__content, .hope-menu__content, .hope-select__content,
+  .manage-layout .manage-header, .manage-layout .manage-sidebar {
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    backdrop-filter: blur(var(--glass-blur));
+  }
+}
+#root .header { border-radius: 0; border-width: 0 0 1px; margin-bottom: 20px; }
+#root .nav { padding: 12px 18px; border-radius: 18px; }
+#root .obj-box { padding: 18px; }
+#root .body { gap: 20px; }
+#root .list > .title { border-bottom: 1px solid var(--glass-border); padding-bottom: 16px; }
+#root .list > :not(.title) { border-radius: 14px; }
+.hope-button, .hope-icon-button, .hope-input, .hope-textarea, .hope-select__trigger,
+.hope-input-group, .hope-tag, .hope-badge, .hope-alert, .hope-tooltip { border-radius: 16px; }
+.hope-button--size-xs, .hope-icon-button--size-xs { border-radius: 10px; }
+.hope-button--size-sm, .hope-icon-button--size-sm { border-radius: 12px; }
+.hope-menu__item, .hope-select__option { border-radius: 12px; }
+.hope-checkbox__control { border-radius: 6px; }
+.hope-modal__overlay, .hope-drawer__overlay { background: rgba(0, 0, 0, .35); }
+.hope-drawer__content { border-radius: 24px 0 0 24px; }
+.hope-drawer__content.manage-drawer { border-radius: 0 24px 24px 0; }
+
+/* Manage panel */
+.manage-layout { background: transparent !important; }
+.manage-layout .manage-header {
+  background: rgba(var(--glass-rgb), var(--card-opacity)) !important;
+  box-shadow: none;
+  border-bottom: 1px solid var(--glass-border);
+}
+.manage-layout .manage-sidebar {
+  margin: 12px 0 12px 12px;
+  height: calc(100% - 24px) !important;
+  border-radius: 24px;
+  padding: 8px;
+  background: rgba(var(--glass-rgb), var(--card-opacity)) !important;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+.manage-layout .manage-content { padding: 12px 16px !important; }
+.manage-layout .manage-content table { border-collapse: separate; border-spacing: 0; }
+.manage-layout .manage-content .hope-table,
+.manage-layout .manage-content .hope-box:has(> table),
+.manage-layout .manage-content .hope-box:has(> .hope-table) {
+  border-radius: 20px;
+  overflow: hidden;
+  background: rgba(var(--glass-rgb), var(--card-opacity));
+}
+.manage-layout .manage-content .hope-tabs__tab { border-radius: 12px 12px 0 0; }
+@media (max-width: 640px) {
+  .manage-layout .manage-content { padding: 10px !important; }
+}
+.appearance-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  margin-bottom: 24px;
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  background: rgba(128, 150, 200, .08);
+}
+.appearance-settings legend { font-weight: 650; padding: 0 6px; }
+.appearance-settings p { font-size: 12px; opacity: .7; }
+.appearance-settings label { font-size: 13px; }
+.appearance-settings output { float: right; font-variant-numeric: tabular-nums; }
+.appearance-settings input[type="url"] {
+  width: 100%; min-width: 0; padding: 10px 12px;
+  background: rgba(128, 150, 200, .08); color: inherit;
+  border: 1px solid rgba(128, 150, 200, .3); border-radius: 12px;
+}
+.appearance-settings input[type="range"] { width: 100%; accent-color: var(--hope-colors-info9); }
+.appearance-settings button {
+  align-self: flex-start; padding: 8px 14px; border-radius: 12px;
+  background: rgba(128, 150, 200, .15); color: inherit; cursor: pointer;
+}
+.appearance-settings :focus-visible { outline: 2px solid var(--hope-colors-info9); outline-offset: 3px; }
+@media (max-width: 640px) {
+  #root .header { margin-bottom: 10px; }
+  #root .obj-box { padding: 8px; border-radius: 20px; }
+  #root .nav { padding: 10px 12px; }
+  #root .body { padding-inline: 10px; gap: 12px; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root { --card-opacity: 100% !important; --component-opacity: 100% !important; --glass-blur: 0px !important; }
+}
+@media (hover: hover) {
+  #root .list > :not(.title):hover {
+    background-color: rgba(128, 150, 200, 0.1);
+  }
+  .appearance-settings button:hover {
+    background-color: rgba(128, 150, 200, 0.25);
+  }
+}
+
+/* Error / empty-state card (e.g. "please add a storage") follows component opacity */
+.error-card {
+  background: rgba(var(--glass-rgb), var(--component-opacity));
+  border: 1px solid var(--glass-border);
+}
+.appearance-swatches { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.appearance-settings .appearance-swatch {
+  width: 26px; height: 26px; padding: 0; border-radius: 50%;
+  border: 2px solid transparent; align-self: auto;
+}
+.appearance-settings .appearance-swatch[aria-pressed="true"] {
+  border-color: var(--hope-colors-neutral12);
+  box-shadow: 0 0 0 2px rgb(var(--glass-rgb)) inset;
+}
+.appearance-swatches input[type="color"] {
+  width: 30px; height: 30px; padding: 0; border: none; background: none; cursor: pointer;
+}

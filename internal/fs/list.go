@@ -2,14 +2,15 @@ package fs
 
 import (
 	"context"
+	"errors"
+	"path"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"path"
 )
 
 // List files
@@ -19,7 +20,7 @@ func list(ctx context.Context, path string, args *ListArgs) ([]model.Obj, error)
 	virtualFiles := op.GetStorageVirtualFilesWithDetailsByPath(ctx, path, !args.WithStorageDetails, args.Refresh, "")
 	storage, actualPath, err := op.GetStorageAndActualPath(path)
 	if err != nil && len(virtualFiles) == 0 {
-		return nil, errors.WithMessage(err, "failed get storage")
+		return nil, errs.Wrap(err, "failed get storage")
 	}
 
 	var _objs []model.Obj
@@ -34,7 +35,7 @@ func list(ctx context.Context, path string, args *ListArgs) ([]model.Obj, error)
 				log.Errorf("fs/list: %+v", err)
 			}
 			if len(virtualFiles) == 0 {
-				return nil, errors.WithMessage(err, "failed get objs")
+				return nil, errs.Wrap(err, "failed get objs")
 			}
 		}
 	}
@@ -56,7 +57,7 @@ func filterReadableObjs(objs []model.Obj, user *model.User, reqPath string, pare
 		if obj.IsDir() {
 			var err error
 			meta, err = op.GetNearestMeta(objPath)
-			if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+			if err != nil && !errors.Is(err, errs.MetaNotFound) {
 				return result, err
 			}
 		} else {

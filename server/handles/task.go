@@ -2,6 +2,7 @@ package handles
 
 import (
 	"math"
+	"slices"
 	"time"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
@@ -66,7 +67,7 @@ func getTaskInfos[T task.TaskExtensionInfo](tasks []T) []TaskInfo {
 }
 
 func argsContains[T comparable](v T, slice ...T) bool {
-	return utils.SliceContains(slice, v)
+	return slices.Contains(slice, v)
 }
 
 func getUserInfo(c *gin.Context) (bool, uint, bool) {

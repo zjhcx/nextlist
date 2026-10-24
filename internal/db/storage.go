@@ -3,8 +3,8 @@ package db
 import (
 	"fmt"
 
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
-	"github.com/pkg/errors"
 )
 
 // why don't need `cache` for storage?
@@ -14,17 +14,17 @@ import (
 
 // CreateStorage just insert storage to database
 func CreateStorage(storage *model.Storage) error {
-	return errors.WithStack(db.Create(storage).Error)
+	return db.Create(storage).Error
 }
 
 // UpdateStorage just update storage in database
 func UpdateStorage(storage *model.Storage) error {
-	return errors.WithStack(db.Save(storage).Error)
+	return db.Save(storage).Error
 }
 
 // DeleteStorageById just delete storage from database by id
 func DeleteStorageById(id uint) error {
-	return errors.WithStack(db.Delete(&model.Storage{}, id).Error)
+	return db.Delete(&model.Storage{}, id).Error
 }
 
 // GetStorages Get all storages from database order by index
@@ -32,11 +32,11 @@ func GetStorages(pageIndex, pageSize int) ([]model.Storage, int64, error) {
 	storageDB := db.Model(&model.Storage{})
 	var count int64
 	if err := storageDB.Count(&count).Error; err != nil {
-		return nil, 0, errors.Wrapf(err, "failed get storages count")
+		return nil, 0, errs.Wrapf(err, "failed get storages count")
 	}
 	var storages []model.Storage
 	if err := addStorageOrder(storageDB).Order(columnName("order")).Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&storages).Error; err != nil {
-		return nil, 0, errors.WithStack(err)
+		return nil, 0, err
 	}
 	return storages, count, nil
 }
@@ -46,7 +46,7 @@ func GetStorageById(id uint) (*model.Storage, error) {
 	var storage model.Storage
 	storage.ID = id
 	if err := db.First(&storage).Error; err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return &storage, nil
 }
@@ -55,7 +55,7 @@ func GetStorageById(id uint) (*model.Storage, error) {
 func GetStorageByMountPath(mountPath string) (*model.Storage, error) {
 	var storage model.Storage
 	if err := db.Where("mount_path = ?", mountPath).First(&storage).Error; err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return &storage, nil
 }
@@ -64,7 +64,7 @@ func GetEnabledStorages() ([]model.Storage, error) {
 	var storages []model.Storage
 	err := addStorageOrder(db).Where(fmt.Sprintf("%s = ?", columnName("disabled")), false).Find(&storages).Error
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return storages, nil
 }

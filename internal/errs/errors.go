@@ -3,8 +3,6 @@ package errs
 import (
 	"errors"
 	"fmt"
-
-	pkgerr "github.com/pkg/errors"
 )
 
 var (
@@ -36,12 +34,12 @@ func NewErr(err error, format string, a ...any) error {
 }
 
 func IsNotFoundError(err error) bool {
-	return errors.Is(pkgerr.Cause(err), ObjectNotFound) || errors.Is(pkgerr.Cause(err), StorageNotFound)
+	return errors.Is(err, ObjectNotFound) || errors.Is(err, StorageNotFound)
 }
 
 func IsNotSupportError(err error) bool {
-	return errors.Is(pkgerr.Cause(err), NotSupport)
+	return errors.Is(err, NotSupport)
 }
 func IsNotImplementError(err error) bool {
-	return errors.Is(pkgerr.Cause(err), NotImplement)
+	return errors.Is(err, NotImplement)
 }

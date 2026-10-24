@@ -12,8 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/fs"
@@ -281,7 +279,7 @@ func (b *s3Backend) putStream(
 			log.Debugf("reqPath: %s not found and objectName contains /, need to makeDir", reqPath)
 			err = fs.MakeDir(ctx, reqPath)
 			if err != nil {
-				return errors.WithMessagef(err, "failed to makeDir, reqPath: %s", reqPath)
+				return errs.Wrapf(err, "failed to makeDir, reqPath: %s", reqPath)
 			}
 		} else {
 			return gofakes3.KeyNotFound(objectName)

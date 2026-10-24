@@ -2,141 +2,179 @@ package smb
 
 import (
 	"context"
-	"fmt"
-	"io/fs"
+	"errors"
+	"net"
 	"os"
-	"path/filepath"
+	"path"
+	"strings"
+	"sync"
 	"time"
 
-	"github.com/OpenListTeam/OpenList/v4/pkg/singleflight"
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
-
 	"github.com/cloudsoda/go-smb2"
 )
 
-func (d *SMB) updateLastConnTime() {
-	d.lastConnTime.Store(time.Now().Unix())
+// A retired share stays alive until its last reader closes. Reconnecting must
+// not unmount the share underneath another upload, copy or ranged download.
+type shareLease struct {
+	share  *smb2.Share
+	conn   net.Conn
+	users  int
+	failed bool
 }
 
+func (d *SMB) updateLastConnTime() { d.lastConnTime.Store(time.Now().Unix()) }
 func (d *SMB) cleanLastConnTime() {
-	d.lastConnTime.Store(0)
-}
-
-func (d *SMB) getLastConnTime() time.Time {
-	return time.Unix(d.lastConnTime.Load(), 0)
-}
-
-func (d *SMB) initFS(ctx context.Context) error {
-	_, err, _ := singleflight.AnyGroup.Do(fmt.Sprintf("SMB.initFS:%p", d), func() (any, error) {
-		return nil, d._initFS(ctx)
-	})
-	return err
-}
-func (d *SMB) _initFS(ctx context.Context) error {
-	dialer := &smb2.Dialer{
-		Initiator: &smb2.NTLMInitiator{
-			User:     d.Username,
-			Password: d.Password,
-		},
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.current != nil {
+		d.current.failed = true
 	}
-	s, err := dialer.Dial(ctx, d.Address)
-	if err != nil {
+}
+
+func (d *SMB) acquireShare(ctx context.Context) (*smb2.Share, func(), error) {
+	if err := ctx.Err(); err != nil {
+		return nil, nil, err
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.closed {
+		return nil, nil, errs.StorageNotInit
+	}
+	if d.current == nil || d.current.failed {
+		dialCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
+		conn, err := (&net.Dialer{}).DialContext(dialCtx, "tcp", d.Address)
+		if err != nil {
+			return nil, nil, err
+		}
+		dialer := &smb2.Dialer{Initiator: &smb2.NTLMInitiator{User: d.Username, Password: d.Password, Domain: d.Domain}}
+		session, err := dialer.DialConn(dialCtx, conn, d.Address)
+		if err != nil {
+			_ = conn.Close()
+			return nil, nil, err
+		}
+		share, err := session.WithContext(dialCtx).Mount(d.ShareName)
+		if err != nil {
+			_ = conn.Close()
+			return nil, nil, err
+		}
+		old := d.current
+		d.current = &shareLease{share: share, conn: conn}
+		if d.leases == nil {
+			d.leases = make(map[*shareLease]struct{})
+		}
+		d.leases[d.current] = struct{}{}
+		if old != nil && old.users == 0 {
+			_ = old.conn.Close()
+			delete(d.leases, old)
+		}
+	}
+	lease := d.current
+	lease.users++
+	var once sync.Once
+	release := func() {
+		once.Do(func() {
+			d.mu.Lock()
+			defer d.mu.Unlock()
+			lease.users--
+			if ctx.Err() != nil {
+				lease.failed = true
+			}
+			if lease == d.current && lease.failed && lease.users == 0 {
+				d.current = nil
+			}
+			if lease != d.current && lease.users == 0 {
+				_ = lease.conn.Close()
+				delete(d.leases, lease)
+			}
+		})
+	}
+	return lease.share.WithContext(ctx), release, nil
+}
+
+func overlappingCopy(src, dst string, directory bool) bool {
+	clean := func(p string) string { return strings.ToLower(path.Clean("/" + strings.ReplaceAll(p, "\\", "/"))) }
+	src, dst = clean(src), clean(dst)
+	return src == dst || (directory && strings.HasPrefix(dst, strings.TrimSuffix(src, "/")+"/"))
+}
+
+func copyFile(ctx context.Context, share *smb2.Share, src, dst string) error {
+	if err := ctx.Err(); err != nil {
 		return err
 	}
-	d.fs, err = s.Mount(d.ShareName)
+	if overlappingCopy(src, dst, false) {
+		return errors.New("cannot copy an SMB file onto itself")
+	}
+	srcfd, err := share.Open(src)
 	if err != nil {
-		return err
-	}
-	d.updateLastConnTime()
-	return err
-}
-
-func (d *SMB) checkConn(ctx context.Context) error {
-	if time.Since(d.getLastConnTime()) < 5*time.Minute {
-		return nil
-	}
-	if d.fs != nil {
-		_ = d.fs.Umount()
-	}
-	return d.initFS(ctx)
-}
-
-// CopyFile File copies a single file from src to dst
-func (d *SMB) CopyFile(src, dst string) error {
-	var err error
-	var srcfd *smb2.File
-	var dstfd *smb2.File
-	var srcinfo fs.FileInfo
-
-	if srcfd, err = d.fs.Open(src); err != nil {
 		return err
 	}
 	defer srcfd.Close()
-
-	if dstfd, err = d.CreateNestedFile(dst); err != nil {
+	info, err := srcfd.Stat()
+	if err != nil {
 		return err
 	}
-	defer dstfd.Close()
-
-	if _, err = utils.CopyWithBuffer(dstfd, srcfd); err != nil {
+	if err := share.MkdirAll(path.Dir(dst), 0700); err != nil {
 		return err
 	}
-	if srcinfo, err = d.fs.Stat(src); err != nil {
+	dstfd, err := share.Create(dst)
+	if err != nil {
 		return err
 	}
-	return d.fs.Chmod(dst, srcinfo.Mode())
+	// Keep *smb2.File on both sides so the SDK can use server-side copy.
+	_, copyErr := utils.CopyWithBuffer(dstfd, srcfd)
+	closeErr := dstfd.Close()
+	if copyErr != nil {
+		return copyErr
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+	return share.Chmod(dst, info.Mode())
 }
 
-// CopyDir Dir copies a whole directory recursively
-func (d *SMB) CopyDir(src string, dst string) error {
-	var err error
-	var fds []fs.FileInfo
-	var srcinfo fs.FileInfo
-
-	if srcinfo, err = d.fs.Stat(src); err != nil {
+func copyDir(ctx context.Context, share *smb2.Share, src, dst string) error {
+	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if err = d.fs.MkdirAll(dst, srcinfo.Mode()); err != nil {
+	if overlappingCopy(src, dst, true) {
+		return errors.New("cannot copy an SMB directory into itself")
+	}
+	info, err := share.Stat(src)
+	if err != nil {
 		return err
 	}
-	if fds, err = d.fs.ReadDir(src); err != nil {
+	if err := share.MkdirAll(dst, info.Mode()); err != nil {
 		return err
 	}
-	for _, fd := range fds {
-		srcfp := filepath.Join(src, fd.Name())
-		dstfp := filepath.Join(dst, fd.Name())
-
-		if fd.IsDir() {
-			if err = d.CopyDir(srcfp, dstfp); err != nil {
-				return err
-			}
+	entries, err := share.ReadDir(src)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		name := entry.Name()
+		if name == "." || name == ".." || name == "" || strings.ContainsAny(name, "/\\\x00") {
+			return errs.PermissionDenied
+		}
+		// Do not follow reparse points recursively: they can escape the source tree
+		// or form a cycle. The regular OpenList copy path can handle unsupported cases.
+		if entry.Mode()&os.ModeSymlink != 0 {
+			return errs.NotSupport
+		}
+		from, to := path.Join(src, name), path.Join(dst, name)
+		if entry.IsDir() {
+			err = copyDir(ctx, share, from, to)
 		} else {
-			if err = d.CopyFile(srcfp, dstfp); err != nil {
-				return err
-			}
+			err = copyFile(ctx, share, from, to)
+		}
+		if err != nil {
+			return err
 		}
 	}
 	return nil
-}
-
-// Exists determine whether the file exists
-func (d *SMB) Exists(name string) bool {
-	if _, err := d.fs.Stat(name); err != nil {
-		if os.IsNotExist(err) {
-			return false
-		}
-	}
-	return true
-}
-
-// CreateNestedFile create nested file
-func (d *SMB) CreateNestedFile(path string) (*smb2.File, error) {
-	basePath := filepath.Dir(path)
-	if !d.Exists(basePath) {
-		err := d.fs.MkdirAll(basePath, 0700)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return d.fs.Create(path)
 }

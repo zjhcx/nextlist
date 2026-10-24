@@ -7,6 +7,8 @@ import (
 	stdpath "path"
 	"strings"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/db"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
@@ -18,7 +20,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 )
 
 // MediaEnabled 媒体库总开关是否开启
@@ -76,7 +77,7 @@ func CanUserAccessPath(user *model.User, reqPath string) bool {
 		return false
 	}
 	meta, err := op.GetNearestMeta(reqPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		return false
 	}
 	// media 播放链路无法携带目录密码，因此受密码保护的目录视为不可访问

@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/drivers/base"
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
@@ -25,7 +27,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/pkg/singleflight"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/avast/retry-go"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 

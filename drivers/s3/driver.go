@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
@@ -22,7 +24,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -283,7 +284,7 @@ func (d *S3) Get(ctx context.Context, path string) (model.Obj, error) {
 	}
 	var awsErr awserr.Error
 	if errors.As(err, &awsErr) && awsErr.Code() != "NotFound" {
-		return nil, errors.WithMessage(err, "failed to head object")
+		return nil, errs.Wrap(err, "failed to head object")
 	}
 
 	// If HeadObject fails with 404, check if it's a directory
@@ -299,7 +300,7 @@ func (d *S3) Get(ctx context.Context, path string) (model.Obj, error) {
 		}
 		listResult, err := d.client.ListObjectsWithContext(ctx, listInput)
 		if err != nil {
-			return nil, errors.WithMessage(err, "failed to list objects with prefix")
+			return nil, errs.Wrap(err, "failed to list objects with prefix")
 		}
 		contents = listResult.Contents
 		commonPrefixes = listResult.CommonPrefixes
@@ -311,7 +312,7 @@ func (d *S3) Get(ctx context.Context, path string) (model.Obj, error) {
 		}
 		listResult, err := d.client.ListObjectsV2WithContext(ctx, listInput)
 		if err != nil {
-			return nil, errors.WithMessage(err, "failed to list objects v2 with prefix")
+			return nil, errs.Wrap(err, "failed to list objects v2 with prefix")
 		}
 		contents = listResult.Contents
 		commonPrefixes = listResult.CommonPrefixes

@@ -11,6 +11,8 @@ import (
 	"sync"
 	"text/template"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/drivers/base"
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
@@ -18,7 +20,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/go-resty/resty/v2"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 

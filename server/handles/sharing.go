@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
@@ -18,7 +20,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	"github.com/OpenListTeam/go-cache"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 )
 
 func SharingGet(c *gin.Context, req *FsGetReq) {
@@ -228,7 +229,7 @@ func SharingDown(c *gin.Context) {
 			Type:   c.Query("type"),
 		})
 		if err != nil {
-			common.ErrorPage(c, errors.WithMessage(err, "failed get sharing link"), 500)
+			common.ErrorPage(c, errs.Wrap(err, "failed get sharing link"), 500)
 			return
 		}
 		_ = countAccess(c.ClientIP(), s)
@@ -241,7 +242,7 @@ func SharingDown(c *gin.Context) {
 			Redirect: true,
 		})
 		if err != nil {
-			common.ErrorPage(c, errors.WithMessage(err, "failed get sharing link"), 500)
+			common.ErrorPage(c, errs.Wrap(err, "failed get sharing link"), 500)
 			return
 		}
 		_ = countAccess(c.ClientIP(), s)

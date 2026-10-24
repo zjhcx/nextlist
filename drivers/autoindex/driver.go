@@ -7,11 +7,11 @@ import (
 
 	"github.com/OpenListTeam/OpenList/v4/drivers/base"
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
 	"github.com/antchfx/htmlquery"
 	"github.com/antchfx/xpath"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -37,22 +37,22 @@ func (d *AutoIndex) Init(ctx context.Context) error {
 	var err error
 	d.itemXPath, err = xpath.Compile(d.ItemXPath)
 	if err != nil {
-		return errors.WithMessage(err, "failed to compile Item XPath")
+		return errs.Wrap(err, "failed to compile Item XPath")
 	}
 	d.nameXPath, err = xpath.Compile(d.NameXPath)
 	if err != nil {
-		return errors.WithMessage(err, "failed to compile Name XPath")
+		return errs.Wrap(err, "failed to compile Name XPath")
 	}
 	if len(d.ModifiedXPath) > 0 {
 		d.modifiedXPath, err = xpath.Compile(d.ModifiedXPath)
 		if err != nil {
-			return errors.WithMessage(err, "failed to compile Modified XPath")
+			return errs.Wrap(err, "failed to compile Modified XPath")
 		}
 	}
 	if len(d.SizeXPath) > 0 {
 		d.sizeXPath, err = xpath.Compile(d.SizeXPath)
 		if err != nil {
-			return errors.WithMessage(err, "failed to compile Size XPath")
+			return errs.Wrap(err, "failed to compile Size XPath")
 		}
 	}
 	ignores := strings.Split(d.IgnoreFileNames, "\n")
@@ -98,12 +98,12 @@ func (d *AutoIndex) List(ctx context.Context, dir model.Obj, args model.ListArgs
 		SetDoNotParseResponse(true).
 		Get(dir.GetPath())
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get url [%s]", dir.GetPath())
+		return nil, errs.Wrapf(err, "failed to get url [%s]", dir.GetPath())
 	}
 	defer res.RawResponse.Body.Close()
 	doc, err := htmlquery.Parse(res.RawBody())
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to parse [%s]", dir.GetPath())
+		return nil, errs.Wrapf(err, "failed to parse [%s]", dir.GetPath())
 	}
 	itemsIter := d.itemXPath.Select(htmlquery.CreateXPathNavigator(doc))
 	var objs []model.Obj
@@ -157,7 +157,7 @@ func (d *AutoIndex) Link(ctx context.Context, file model.Obj, args model.LinkArg
 		SetDoNotParseResponse(true).
 		Head(file.GetPath())
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to head [%s]", file.GetPath())
+		return nil, errs.Wrapf(err, "failed to head [%s]", file.GetPath())
 	}
 	_ = res.RawResponse.Body.Close()
 	return &model.Link{

@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"slices"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/fs"
@@ -13,7 +15,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/pkg/generic"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 )
 
 type RecursiveMoveReq struct {
@@ -41,7 +42,7 @@ func FsRecursiveMove(c *gin.Context) {
 		return
 	}
 	srcMeta, err := op.GetNearestMeta(srcDir)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		common.ErrorResp(c, err, 500, true)
 		return
 	}
@@ -57,7 +58,7 @@ func FsRecursiveMove(c *gin.Context) {
 		return
 	}
 	dstMeta, err := op.GetNearestMeta(dstDir)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		common.ErrorResp(c, err, 500, true)
 		return
 	}
@@ -175,7 +176,7 @@ func FsBatchRename(c *gin.Context) {
 	}
 
 	meta, err := op.GetNearestMeta(reqPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		common.ErrorResp(c, err, 500, true)
 		return
 	}
@@ -233,7 +234,7 @@ func FsRegexRename(c *gin.Context) {
 	}
 
 	meta, err := op.GetNearestMeta(reqPath)
-	if err != nil && !errors.Is(errors.Cause(err), errs.MetaNotFound) {
+	if err != nil && !errors.Is(err, errs.MetaNotFound) {
 		common.ErrorResp(c, err, 500, true)
 		return
 	}

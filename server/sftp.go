@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/drivers/base"
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
@@ -15,7 +17,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/server/ftp"
 	"github.com/OpenListTeam/OpenList/v4/server/sftp"
 	"github.com/OpenListTeam/sftpd-openlist"
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 )
 

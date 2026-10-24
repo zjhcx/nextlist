@@ -1,108 +1,135 @@
 package sftp
 
 import (
-	"fmt"
+	"context"
+	"errors"
+	"net"
+	"os"
 	"path"
+	"strings"
 	"time"
 
-	"github.com/OpenListTeam/OpenList/v4/pkg/singleflight"
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/pkg/sftp"
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
 
-// do others that not defined in Driver interface
-
-func (d *SFTP) initClient() error {
-	_, err, _ := singleflight.AnyGroup.Do(fmt.Sprintf("SFTP.initClient:%p", d), func() (any, error) {
-		return nil, d._initClient()
-	})
-	return err
+func (d *SFTP) getClient(ctx context.Context) (*sftp.Client, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	d.connMu.Lock()
+	defer d.connMu.Unlock()
+	if d.closed {
+		return nil, errs.StorageNotInit
+	}
+	if d.client != nil {
+		select {
+		case <-d.clientDone:
+		default:
+			return d.client, nil
+		}
+		_ = d.sshClient.Close()
+		_ = d.client.Close()
+		d.client = nil
+	}
+	client, conn, err := d.connect(ctx)
+	if err != nil {
+		return nil, err
+	}
+	done := make(chan struct{})
+	d.client, d.sshClient, d.clientDone = client, conn, done
+	go func() { _ = client.Wait(); close(done) }()
+	return client, nil
 }
-func (d *SFTP) _initClient() error {
+
+func (d *SFTP) connect(ctx context.Context) (*sftp.Client, *ssh.Client, error) {
 	var auth ssh.AuthMethod
-	if len(d.PrivateKey) > 0 {
-		var err error
+	if d.PrivateKey != "" {
 		var signer ssh.Signer
-		if len(d.Passphrase) > 0 {
+		var err error
+		if d.Passphrase != "" {
 			signer, err = ssh.ParsePrivateKeyWithPassphrase([]byte(d.PrivateKey), []byte(d.Passphrase))
 		} else {
 			signer, err = ssh.ParsePrivateKey([]byte(d.PrivateKey))
 		}
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 		auth = ssh.PublicKeys(signer)
 	} else {
 		auth = ssh.Password(d.Password)
 	}
-	config := &ssh.ClientConfig{
-		User:            d.Username,
-		Auth:            []ssh.AuthMethod{auth},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         10 * time.Second,
-	}
-	conn, err := ssh.Dial("tcp", d.Address, config)
-	if err != nil {
-		return err
-	}
-	d.client, err = sftp.NewClient(conn)
-	if err == nil {
-		d.clientConnectionError = nil
-		go func(d *SFTP) {
-			d.clientConnectionError = d.client.Wait()
-		}(d)
-	}
-	return err
-}
-
-func (d *SFTP) clientReconnectOnConnectionError() error {
-	err := d.clientConnectionError
-	if err == nil {
-		return nil
-	}
-	log.Debugf("[sftp] discarding closed sftp connection: %v", err)
-	if d.client != nil {
-		_ = d.client.Close()
-	}
-	err = d.initClient()
-	return err
-}
-
-func (d *SFTP) remove(remotePath string) error {
-	f, err := d.client.Stat(remotePath)
-	if err != nil {
-		return nil
-	}
-	if f.IsDir() {
-		return d.removeDirectory(remotePath)
-	} else {
-		return d.removeFile(remotePath)
-	}
-}
-
-func (d *SFTP) removeDirectory(remotePath string) error {
-	remoteFiles, err := d.client.ReadDir(remotePath)
-	if err != nil {
-		return err
-	}
-	for _, backupDir := range remoteFiles {
-		remoteFilePath := path.Join(remotePath, backupDir.Name())
-		if backupDir.IsDir() {
-			err := d.removeDirectory(remoteFilePath)
-			if err != nil {
-				return err
+	hostKey := ssh.InsecureIgnoreHostKey()
+	if fingerprint := strings.TrimSpace(d.HostKeyFingerprint); fingerprint != "" {
+		if !strings.HasPrefix(fingerprint, "SHA256:") {
+			return nil, nil, errors.New("SFTP host key fingerprint must use SHA256 format")
+		}
+		hostKey = func(_ string, _ net.Addr, key ssh.PublicKey) error {
+			if ssh.FingerprintSHA256(key) != fingerprint {
+				return errors.New("SFTP host key fingerprint mismatch")
 			}
-		} else {
-			err := d.removeFile(remoteFilePath)
-			if err != nil {
-				return err
-			}
+			return nil
 		}
 	}
-	return d.client.RemoveDirectory(remotePath)
+	config := &ssh.ClientConfig{User: d.Username, Auth: []ssh.AuthMethod{auth}, HostKeyCallback: hostKey}
+	dialCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	if d.lifetime == nil {
+		return nil, nil, errs.StorageNotInit
+	}
+	stopMount := context.AfterFunc(d.lifetime, cancel)
+	defer stopMount()
+	raw, err := (&net.Dialer{}).DialContext(dialCtx, "tcp", d.Address)
+	if err != nil {
+		return nil, nil, err
+	}
+	stop := context.AfterFunc(dialCtx, func() { _ = raw.Close() })
+	defer stop()
+	deadline, _ := dialCtx.Deadline()
+	_ = raw.SetDeadline(deadline)
+	conn, channels, requests, err := ssh.NewClientConn(raw, d.Address, config)
+	if err != nil {
+		_ = raw.Close()
+		return nil, nil, err
+	}
+	transport := ssh.NewClient(conn, channels, requests)
+	client, err := sftp.NewClient(transport)
+	if err != nil {
+		_ = transport.Close()
+		return nil, nil, err
+	}
+	if !stop() && dialCtx.Err() != nil {
+		_ = transport.Close()
+		return nil, nil, dialCtx.Err()
+	}
+	_ = raw.SetDeadline(time.Time{})
+	return client, transport, nil
 }
 
-func (d *SFTP) removeFile(remotePath string) error {
-	return d.client.Remove(path.Join(remotePath))
+func remove(ctx context.Context, client *sftp.Client, p string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	info, err := client.Lstat(p)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return client.Remove(p)
+	}
+	entries, err := client.ReadDirContext(ctx, p)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		if name == "." || name == ".." || name == "" || strings.ContainsAny(name, "/\x00") {
+			return errs.PermissionDenied
+		}
+		if err := remove(ctx, client, path.Join(p, name)); err != nil {
+			return err
+		}
+	}
+	return client.RemoveDirectory(p)
 }

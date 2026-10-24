@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/db"
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
 	"github.com/OpenListTeam/OpenList/v4/internal/errs"
@@ -17,7 +19,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/pkg/generic_sync"
 	"github.com/OpenListTeam/OpenList/v4/pkg/singleflight"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -38,7 +39,7 @@ func GetStorageByMountPath(mountPath string) (driver.Driver, error) {
 	mountPath = utils.FixAndCleanPath(mountPath)
 	storageDriver, ok := storagesMap.Load(mountPath)
 	if !ok {
-		return nil, errors.Errorf("no mount path for an storage is: %s", mountPath)
+		return nil, fmt.Errorf("no mount path for an storage is: %s", mountPath)
 	}
 	return storageDriver, nil
 }
@@ -53,19 +54,19 @@ func CreateStorage(ctx context.Context, storage model.Storage) (uint, error) {
 	driverName := storage.Driver
 	driverNew, err := GetDriver(driverName)
 	if err != nil {
-		return 0, errors.WithMessage(err, "failed get driver new")
+		return 0, errs.Wrap(err, "failed get driver new")
 	}
 	storageDriver := driverNew()
 	// insert storage to database
 	err = db.CreateStorage(&storage)
 	if err != nil {
-		return storage.ID, errors.WithMessage(err, "failed create storage in database")
+		return storage.ID, errs.Wrap(err, "failed create storage in database")
 	}
 	// already has an id
 	err = initStorage(ctx, storage, storageDriver)
 	go callStorageHooks("add", storageDriver)
 	if err != nil {
-		return storage.ID, errors.Wrap(err, "failed init storage but storage is already created")
+		return storage.ID, errs.Wrap(err, "failed init storage but storage is already created")
 	}
 	log.Debugf("storage %+v is created", storageDriver)
 	return storage.ID, nil
@@ -78,7 +79,7 @@ func LoadStorage(ctx context.Context, storage model.Storage) error {
 	driverName := storage.Driver
 	driverNew, err := GetDriver(driverName)
 	if err != nil {
-		return errors.WithMessage(err, "failed get driver new")
+		return errs.Wrap(err, "failed get driver new")
 	}
 	storageDriver := driverNew()
 
@@ -142,7 +143,7 @@ func initStorage(ctx context.Context, storage model.Storage, storageDriver drive
 		} else {
 			driverStorage.SetStatus(err.Error())
 		}
-		err = errors.Wrap(err, "failed init storage")
+		err = errs.Wrap(err, "failed init storage")
 	} else {
 		driverStorage.SetStatus(WORK)
 	}
@@ -171,19 +172,19 @@ func IsUseOnlineAPI(storageDriver driver.Driver) bool {
 func EnableStorage(ctx context.Context, id uint) error {
 	storage, err := db.GetStorageById(id)
 	if err != nil {
-		return errors.WithMessage(err, "failed get storage")
+		return errs.Wrap(err, "failed get storage")
 	}
 	if !storage.Disabled {
-		return errors.Errorf("this storage have enabled")
+		return fmt.Errorf("this storage have enabled")
 	}
 	storage.Disabled = false
 	err = db.UpdateStorage(storage)
 	if err != nil {
-		return errors.WithMessage(err, "failed update storage in db")
+		return errs.Wrap(err, "failed update storage in db")
 	}
 	err = LoadStorage(ctx, *storage)
 	if err != nil {
-		return errors.WithMessage(err, "failed load storage")
+		return errs.Wrap(err, "failed load storage")
 	}
 	return nil
 }
@@ -191,25 +192,25 @@ func EnableStorage(ctx context.Context, id uint) error {
 func DisableStorage(ctx context.Context, id uint) error {
 	storage, err := db.GetStorageById(id)
 	if err != nil {
-		return errors.WithMessage(err, "failed get storage")
+		return errs.Wrap(err, "failed get storage")
 	}
 	if storage.Disabled {
-		return errors.Errorf("this storage have disabled")
+		return fmt.Errorf("this storage have disabled")
 	}
 	storageDriver, err := GetStorageByMountPath(storage.MountPath)
 	if err != nil {
-		return errors.WithMessage(err, "failed get storage driver")
+		return errs.Wrap(err, "failed get storage driver")
 	}
 	// drop the storage in the driver
 	if err := storageDriver.Drop(ctx); err != nil {
-		return errors.Wrap(err, "failed drop storage")
+		return errs.Wrap(err, "failed drop storage")
 	}
 	// delete the storage in the memory
 	storage.Disabled = true
 	storage.SetStatus(DISABLED)
 	err = db.UpdateStorage(storage)
 	if err != nil {
-		return errors.WithMessage(err, "failed update storage in db")
+		return errs.Wrap(err, "failed update storage in db")
 	}
 	storagesMap.Delete(storage.MountPath)
 	go callStorageHooks("del", storageDriver)
@@ -222,23 +223,23 @@ func DisableStorage(ctx context.Context, id uint) error {
 func UpdateStorage(ctx context.Context, storage model.Storage) error {
 	oldStorage, err := db.GetStorageById(storage.ID)
 	if err != nil {
-		return errors.WithMessage(err, "failed get old storage")
+		return errs.Wrap(err, "failed get old storage")
 	}
 	if oldStorage.Driver != storage.Driver {
-		return errors.Errorf("driver cannot be changed")
+		return fmt.Errorf("driver cannot be changed")
 	}
 	storage.Modified = time.Now()
 	storage.MountPath = utils.FixAndCleanPath(storage.MountPath)
 	err = db.UpdateStorage(&storage)
 	if err != nil {
-		return errors.WithMessage(err, "failed update storage in database")
+		return errs.Wrap(err, "failed update storage in database")
 	}
 	if storage.Disabled {
 		return nil
 	}
 	storageDriver, err := GetStorageByMountPath(oldStorage.MountPath)
 	if err != nil {
-		return errors.WithMessage(err, "failed get storage driver")
+		return errs.Wrap(err, "failed get storage driver")
 	}
 	// Storage settings may change which objects are exposed at the same mount
 	// path, so cached entries must be discarded before reinitializing the driver.
@@ -250,7 +251,7 @@ func UpdateStorage(ctx context.Context, storage model.Storage) error {
 	}
 	err = storageDriver.Drop(ctx)
 	if err != nil {
-		return errors.Wrapf(err, "failed drop storage")
+		return errs.Wrapf(err, "failed drop storage")
 	}
 
 	err = initStorage(ctx, storage, storageDriver)
@@ -262,17 +263,17 @@ func UpdateStorage(ctx context.Context, storage model.Storage) error {
 func DeleteStorageById(ctx context.Context, id uint) error {
 	storage, err := db.GetStorageById(id)
 	if err != nil {
-		return errors.WithMessage(err, "failed get storage")
+		return errs.Wrap(err, "failed get storage")
 	}
 	var dropErr error = nil
 	if !storage.Disabled {
 		storageDriver, err := GetStorageByMountPath(storage.MountPath)
 		if err != nil {
-			return errors.WithMessage(err, "failed get storage driver")
+			return errs.Wrap(err, "failed get storage driver")
 		}
 		// drop the storage in the driver
 		if err := storageDriver.Drop(ctx); err != nil {
-			dropErr = errors.Wrapf(err, "failed drop storage")
+			dropErr = errs.Wrapf(err, "failed drop storage")
 		}
 		// delete the storage in the memory
 		storagesMap.Delete(storage.MountPath)
@@ -282,7 +283,7 @@ func DeleteStorageById(ctx context.Context, id uint) error {
 	}
 	// delete the storage in the database
 	if err := db.DeleteStorageById(id); err != nil {
-		return errors.WithMessage(err, "failed delete storage in database")
+		return errs.Wrap(err, "failed delete storage in database")
 	}
 	return dropErr
 }
@@ -300,12 +301,12 @@ func saveDriverStorage(driver driver.Driver) error {
 	addition := driver.GetAddition()
 	str, err := utils.Json.MarshalToString(addition)
 	if err != nil {
-		return errors.Wrap(err, "error while marshal addition")
+		return errs.Wrap(err, "error while marshal addition")
 	}
 	storage.Addition = str
 	err = db.UpdateStorage(storage)
 	if err != nil {
-		return errors.WithMessage(err, "failed update storage in database")
+		return errs.Wrap(err, "failed update storage in database")
 	}
 	return nil
 }
@@ -469,7 +470,7 @@ var detailsG singleflight.Group[*model.StorageDetails]
 
 func GetStorageDetails(ctx context.Context, storage driver.Driver, refresh ...bool) (*model.StorageDetails, error) {
 	if storage.Config().CheckStatus && storage.GetStorage().Status != WORK {
-		return nil, errors.WithMessagef(errs.StorageNotInit, "storage status: %s", storage.GetStorage().Status)
+		return nil, errs.Wrapf(errs.StorageNotInit, "storage status: %s", storage.GetStorage().Status)
 	}
 	wd, ok := storage.(driver.WithDetails)
 	if !ok {

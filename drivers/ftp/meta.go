@@ -23,11 +23,13 @@ func decode(str string, encoding string) string {
 }
 
 type Addition struct {
-	Address  string `json:"address" required:"true"`
-	Encoding string `json:"encoding" required:"true"`
-	Username string `json:"username" required:"true"`
-	Password string `json:"password" required:"true"`
-	CwdList  bool   `json:"cwd_list" type:"bool" default:"false" help:"enter directory before listing"`
+	Address       string `json:"address" required:"true"`
+	Encoding      string `json:"encoding" required:"true"`
+	Username      string `json:"username" required:"true"`
+	Password      string `json:"password" required:"true"`
+	CwdList       bool   `json:"cwd_list" type:"bool" default:"false" help:"enter directory before listing"`
+	TLS           string `json:"tls" type:"select" options:"none,explicit,implicit" default:"none"`
+	TLSSkipVerify bool   `json:"tls_skip_verify" default:"false" help:"Skip FTPS certificate verification"`
 	driver.RootPath
 }
 

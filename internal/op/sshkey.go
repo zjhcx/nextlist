@@ -3,9 +3,11 @@ package op
 import (
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/db"
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -34,7 +36,7 @@ func GetSSHPublicKeyByIdAndUserId(id uint, userId uint) (*model.SSHPublicKey, er
 		return nil, err
 	}
 	if key.UserId != userId {
-		return nil, errors.Wrapf(err, "failed get old key")
+		return nil, errs.Wrapf(err, "failed get old key")
 	}
 	return key, nil
 }

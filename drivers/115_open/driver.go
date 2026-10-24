@@ -358,7 +358,7 @@ func (d *Open115) Put(ctx context.Context, dstDir model.Obj, file model.FileStre
 		return nil
 	}
 	// 2. two way verify
-	if utils.SliceContains([]int{6, 7, 8}, resp.Status) {
+	if slices.Contains([]int{6, 7, 8}, resp.Status) {
 		signCheck := strings.Split(resp.SignCheck, "-") //"sign_check": "2392148-2392298" 取2392148-2392298之间的内容(包含2392148、2392298)的sha1
 		start, err := strconv.ParseInt(signCheck[0], 10, 64)
 		if err != nil {

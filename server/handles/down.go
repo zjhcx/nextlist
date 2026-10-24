@@ -3,6 +3,7 @@ package handles
 import (
 	"errors"
 	stdpath "path"
+	"slices"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
@@ -138,10 +139,10 @@ func canProxy(storage driver.Driver, filename string) bool {
 	if storage.Config().MustProxy() || storage.GetStorage().WebProxy || storage.GetStorage().WebdavProxyURL() {
 		return true
 	}
-	if utils.SliceContains(conf.SlicesMap[conf.ProxyTypes], utils.Ext(filename)) {
+	if slices.Contains(conf.SlicesMap[conf.ProxyTypes], utils.Ext(filename)) {
 		return true
 	}
-	if utils.SliceContains(conf.SlicesMap[conf.TextTypes], utils.Ext(filename)) {
+	if slices.Contains(conf.SlicesMap[conf.TextTypes], utils.Ext(filename)) {
 		return true
 	}
 	return false

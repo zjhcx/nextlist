@@ -14,17 +14,10 @@ func MappingName(name string) string {
 	return name
 }
 
-var DEC = map[string]string{
-	"-": "+",
-	"_": "/",
-	".": "=",
-}
+var safeAtobReplacer = strings.NewReplacer("-", "+", "_", "/", ".", "=")
 
 func SafeAtob(data string) (string, error) {
-	for k, v := range DEC {
-		data = strings.ReplaceAll(data, k, v)
-	}
-	bytes, err := base64.StdEncoding.DecodeString(data)
+	bytes, err := base64.StdEncoding.DecodeString(safeAtobReplacer.Replace(data))
 	if err != nil {
 		return "", err
 	}

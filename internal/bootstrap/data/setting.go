@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strconv"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/cmd/flags"
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/db"
@@ -13,7 +15,6 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils/random"
-	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 

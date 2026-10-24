@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/db"
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/pkg/singleflight"
-	"github.com/pkg/errors"
 )
 
 var settingG singleflight.Group[*model.SettingItem]
@@ -189,10 +189,10 @@ func SaveSettingItem(item *model.SettingItem) (err error) {
 func DeleteSettingItemByKey(key string) error {
 	old, err := GetSettingItemByKey(key)
 	if err != nil {
-		return errors.WithMessage(err, "failed to get settingItem")
+		return errs.Wrap(err, "failed to get settingItem")
 	}
 	if !old.IsDeprecated() {
-		return errors.Errorf("setting [%s] is not deprecated", key)
+		return fmt.Errorf("setting [%s] is not deprecated", key)
 	}
 	SettingCacheUpdate()
 	return db.DeleteSettingItemByKey(key)

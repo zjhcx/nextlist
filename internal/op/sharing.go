@@ -5,12 +5,14 @@ import (
 	stdpath "path"
 	"strings"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/db"
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/pkg/singleflight"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/OpenListTeam/go-cache"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -52,11 +54,11 @@ func GetSharingById(id string, refresh ...bool) (*model.Sharing, error) {
 	sharing, err, _ := sharingG.Do(id, func() (*model.Sharing, error) {
 		s, err := db.GetSharingById(id)
 		if err != nil {
-			return nil, errors.WithMessagef(err, "failed get sharing [%s]", id)
+			return nil, errs.Wrapf(err, "failed get sharing [%s]", id)
 		}
 		creator, err := GetUserById(s.CreatorId)
 		if err != nil {
-			return nil, errors.WithMessagef(err, "failed get sharing creator [%s]", id)
+			return nil, errs.Wrapf(err, "failed get sharing creator [%s]", id)
 		}
 		var files []string
 		if err = utils.Json.UnmarshalFromString(s.FilesRaw, &files); err != nil {
@@ -74,7 +76,7 @@ func GetSharingById(id string, refresh ...bool) (*model.Sharing, error) {
 func GetSharings(pageIndex, pageSize int) ([]model.Sharing, int64, error) {
 	s, cnt, err := db.GetSharings(pageIndex, pageSize)
 	if err != nil {
-		return nil, 0, errors.WithStack(err)
+		return nil, 0, err
 	}
 	return makeJoined(s), cnt, nil
 }
@@ -82,7 +84,7 @@ func GetSharings(pageIndex, pageSize int) ([]model.Sharing, int64, error) {
 func GetSharingsByCreatorId(userId uint, pageIndex, pageSize int) ([]model.Sharing, int64, error) {
 	s, cnt, err := db.GetSharingsByCreatorId(userId, pageIndex, pageSize)
 	if err != nil {
-		return nil, 0, errors.WithStack(err)
+		return nil, 0, err
 	}
 	return makeJoined(s), cnt, nil
 }
@@ -97,7 +99,7 @@ func GetSharingUnwrapPath(sharing *model.Sharing, path string) (unwrapPath strin
 	if sharing.Creator != nil && !sharing.Creator.IsAdmin() {
 		for _, f := range sharing.Files {
 			if !utils.IsSubPath(sharing.Creator.BasePath, f) {
-				return "", errors.Errorf("sharing path [%s] is outside the creator's base path", f)
+				return "", fmt.Errorf("sharing path [%s] is outside the creator's base path", f)
 			}
 		}
 	}
@@ -126,7 +128,7 @@ func CreateSharing(sharing *model.Sharing) (id string, err error) {
 	sharing.CreatorId = sharing.Creator.ID
 	sharing.FilesRaw, err = utils.Json.MarshalToString(utils.MustSliceConvert(sharing.Files, utils.FixAndCleanPath))
 	if err != nil {
-		return "", errors.WithStack(err)
+		return "", err
 	}
 	return db.CreateSharing(sharing.SharingDB)
 }
@@ -136,7 +138,7 @@ func UpdateSharing(sharing *model.Sharing, skipMarshal ...bool) (err error) {
 		sharing.CreatorId = sharing.Creator.ID
 		sharing.FilesRaw, err = utils.Json.MarshalToString(utils.MustSliceConvert(sharing.Files, utils.FixAndCleanPath))
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 	}
 	sharingCache.Del(sharing.ID)

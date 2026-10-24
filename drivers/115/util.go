@@ -16,8 +16,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"errors"
+
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
 	"github.com/OpenListTeam/OpenList/v4/internal/driver"
+	"github.com/OpenListTeam/OpenList/v4/internal/errs"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	netutil "github.com/OpenListTeam/OpenList/v4/internal/net"
 	"github.com/OpenListTeam/OpenList/v4/pkg/http_range"
@@ -25,7 +28,6 @@ import (
 	cipher "github.com/SheltonZhu/115driver/pkg/crypto/ec115"
 	driver115 "github.com/SheltonZhu/115driver/pkg/driver"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
-	"github.com/pkg/errors"
 )
 
 // var UserAgent = driver115.UA115Browser
@@ -44,13 +46,13 @@ func (d *Pan115) login() error {
 			UID: d.QRCodeToken,
 		}
 		if cr, err = d.client.QRCodeLoginWithApp(s, driver115.LoginApp(d.QRCodeSource)); err != nil {
-			return errors.Wrap(err, "failed to login by qrcode")
+			return errs.Wrap(err, "failed to login by qrcode")
 		}
 		d.Cookie = fmt.Sprintf("UID=%s;CID=%s;SEID=%s;KID=%s", cr.UID, cr.CID, cr.SEID, cr.KID)
 		d.QRCodeToken = ""
 	} else if d.Cookie != "" {
 		if err = cr.FromCookie(d.Cookie); err != nil {
-			return errors.Wrap(err, "failed to login by cookies")
+			return errs.Wrap(err, "failed to login by cookies")
 		}
 		d.client.ImportCredential(cr)
 	} else {
@@ -344,7 +346,7 @@ func (d *Pan115) UploadByMultipart(ctx context.Context, params *driver115.Upload
 					select {
 					case <-ticker.C:
 						if ossToken, err = d.client.GetOSSToken(); err != nil { // 到时重新获取ossToken
-							errCh <- errors.Wrap(err, "刷新token时出现错误")
+							errCh <- errs.Wrap(err, "刷新token时出现错误")
 						}
 					default:
 					}
@@ -358,7 +360,7 @@ func (d *Pan115) UploadByMultipart(ctx context.Context, params *driver115.Upload
 					}
 				}
 				if err != nil {
-					errCh <- errors.Wrap(err, fmt.Sprintf("上传 %s 的第%d个分片时出现错误：%v", s.GetName(), chunk.Number, err))
+					errCh <- errs.Wrap(err, fmt.Sprintf("上传 %s 的第%d个分片时出现错误：%v", s.GetName(), chunk.Number, err))
 				} else {
 					num := completedNum.Add(1)
 					up(float64(num) * 100.0 / float64(len(chunks)))

@@ -339,13 +339,19 @@ func (r *SimpleReaderWithSize) Close() error {
 type ReaderUpdatingProgress struct {
 	Reader ReaderWithSize
 	model.UpdateProgress
-	offset int
+	offset int64
 }
 
 func (r *ReaderUpdatingProgress) Read(p []byte) (n int, err error) {
 	n, err = r.Reader.Read(p)
-	r.offset += n
-	r.UpdateProgress(math.Min(100.0, float64(r.offset)/float64(r.Reader.GetSize())*100.0))
+	r.offset += int64(n)
+	if r.UpdateProgress != nil {
+		if size := r.Reader.GetSize(); size > 0 {
+			r.UpdateProgress(math.Min(100.0, float64(r.offset)/float64(size)*100.0))
+		} else if size == 0 && err == io.EOF {
+			r.UpdateProgress(100)
+		}
+	}
 	return n, err
 }
 

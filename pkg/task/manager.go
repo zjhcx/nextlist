@@ -1,9 +1,9 @@
 package task
 
 import (
+	"slices"
+
 	"github.com/OpenListTeam/OpenList/v4/pkg/generic_sync"
-	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -57,7 +57,7 @@ func (tm *Manager[K]) MustGet(tid K) *Task[K] {
 func (tm *Manager[K]) Retry(tid K) error {
 	t, ok := tm.Get(tid)
 	if !ok {
-		return errors.WithStack(ErrTaskNotFound)
+		return ErrTaskNotFound
 	}
 	tm.do(t)
 	return nil
@@ -66,7 +66,7 @@ func (tm *Manager[K]) Retry(tid K) error {
 func (tm *Manager[K]) Cancel(tid K) error {
 	t, ok := tm.Get(tid)
 	if !ok {
-		return errors.WithStack(ErrTaskNotFound)
+		return ErrTaskNotFound
 	}
 	t.Cancel()
 	return nil
@@ -75,10 +75,10 @@ func (tm *Manager[K]) Cancel(tid K) error {
 func (tm *Manager[K]) Remove(tid K) error {
 	t, ok := tm.Get(tid)
 	if !ok {
-		return errors.WithStack(ErrTaskNotFound)
+		return ErrTaskNotFound
 	}
 	if !t.Done() {
-		return errors.WithStack(ErrTaskRunning)
+		return ErrTaskRunning
 	}
 	tm.tasks.Delete(tid)
 	return nil
@@ -93,7 +93,7 @@ func (tm *Manager[K]) RemoveAll() {
 func (tm *Manager[K]) RemoveByStates(states ...string) {
 	tasks := tm.GetAll()
 	for _, task := range tasks {
-		if utils.SliceContains(states, task.GetState()) {
+		if slices.Contains(states, task.GetState()) {
 			_ = tm.Remove(task.ID)
 		}
 	}
@@ -102,7 +102,7 @@ func (tm *Manager[K]) RemoveByStates(states ...string) {
 func (tm *Manager[K]) GetByStates(states ...string) []*Task[K] {
 	var tasks []*Task[K]
 	tm.tasks.Range(func(key K, value *Task[K]) bool {
-		if utils.SliceContains(states, value.GetState()) {
+		if slices.Contains(states, value.GetState()) {
 			tasks = append(tasks, value)
 		}
 		return true
