@@ -21,6 +21,8 @@ import { getMediaStreamUrl } from "~/utils/media_api"
 import { accent } from "~/store/accent"
 import { playersForPlatform, renderPlayerScheme } from "~/utils/players"
 
+import { useT } from "~/hooks"
+
 const TARGET_KEY = "media-play-target"
 
 interface MediaPlayButtonProps {
@@ -50,6 +52,7 @@ const iconOf = (id: string) => {
  * 默认「浏览器播放」；切换为外部播放器后，文本固定为「播放器播放」。
  */
 export const MediaPlayButton = (props: MediaPlayButtonProps) => {
+  const t = useT()
   const { colorMode } = useColorMode()
   const isDark = createMemo(() => colorMode() === "dark")
   const players = () => playersForPlatform(getPlatform())
@@ -75,19 +78,22 @@ export const MediaPlayButton = (props: MediaPlayButtonProps) => {
   let rootRef: HTMLDivElement | undefined
 
   const current = () => players().find((p) => p.id === target())
-  const label = () => (target() === "browser" ? "浏览器播放" : "播放器播放")
+  const label = () =>
+    target() === "browser"
+      ? t("media.player.browser_play")
+      : t("media.player.external_play")
 
   const resolveURL = async (): Promise<string | null> => {
     if (props.path) {
       const resp = await getMediaStreamUrl({ path: props.path })
       if (resp.code !== 200 || !resp.data) {
-        notify.error(resp.message || "获取直链失败")
+        notify.error(resp.message || t("media.player.url_failed"))
         return null
       }
       return resp.data.url
     }
     if (!props.itemId) {
-      notify.error("缺少媒体信息")
+      notify.error(t("media.player.missing_media"))
       return null
     }
     const resp = await getMediaStreamUrl({
@@ -95,7 +101,7 @@ export const MediaPlayButton = (props: MediaPlayButtonProps) => {
       episode: props.episode,
     })
     if (resp.code !== 200 || !resp.data) {
-      notify.error(resp.message || "获取直链失败")
+      notify.error(resp.message || t("media.player.url_failed"))
       return null
     }
     return resp.data.url
@@ -161,7 +167,7 @@ export const MediaPlayButton = (props: MediaPlayButtonProps) => {
     // Emby 走自身深链（服务器 ID + 条目 ID），不播放直链
     if (player.id === "emby") {
       if (!props.itemId) {
-        notify.error("缺少媒体信息")
+        notify.error(t("media.player.missing_media"))
         return
       }
       const serverId = embyServerId()
@@ -171,7 +177,7 @@ export const MediaPlayButton = (props: MediaPlayButtonProps) => {
       }
       const sid = await resolveEmbyServer()
       if (!sid) {
-        notify.error("无法获取 Emby 服务器 ID")
+        notify.error(t("media.player.emby_id_failed"))
         return
       }
       launch(player.scheme, "", sid, props.itemId)
@@ -269,8 +275,8 @@ export const MediaPlayButton = (props: MediaPlayButtonProps) => {
         </button>
         <button
           class="media-split-btn media-split-btn--caret"
-          aria-label="选择播放器"
-          title="选择播放器"
+          aria-label={t("media.player.select_player")}
+          title={t("media.player.select_player")}
           onClick={(e) => {
             e.stopPropagation()
             setOpen(!open())
@@ -301,7 +307,7 @@ export const MediaPlayButton = (props: MediaPlayButtonProps) => {
         >
           <For
             each={[
-              { id: "browser", name: "浏览器播放" },
+              { id: "browser", name: t("media.player.browser_play") },
               ...players().map((p) => ({ id: p.id, name: p.name })),
             ]}
           >

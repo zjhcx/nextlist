@@ -81,6 +81,7 @@ function ensureAc3Decoder(force = false) {
 
 // ==================== 视频卡片 ====================
 const VideoCard = (props: { item: MediaItem }) => {
+  const t = useT()
   const { colorMode } = useColorMode()
   const isDark = createMemo(() => colorMode() === "dark")
   const cardBg = createMemo(() =>
@@ -99,7 +100,7 @@ const VideoCard = (props: { item: MediaItem }) => {
   const episodeCount = () => parseEpisodes(props.item.episodes).length
   const sizeText = () =>
     episodeCount() > 0
-      ? `${episodeCount()} 集`
+      ? t("media.video.episodes", { count: episodeCount() })
       : formatMediaSize(props.item.file_size)
   return (
     <div
@@ -207,7 +208,8 @@ const VideoCard = (props: { item: MediaItem }) => {
                   "white-space": "nowrap",
                 }}
               >
-                演员：{authors().slice(0, 4).join(" / ")}
+                {t("media.video.cast")}
+                {authors().slice(0, 4).join(" / ")}
               </div>
             </Show>
             <Show when={props.item.plot || props.item.description}>
@@ -774,7 +776,7 @@ const VideoPlayer = (props: {
             "font-size": "13px",
           }}
         >
-          ← 返回
+          ← {t("global.back")}
         </button>
         <span
           style={{
@@ -907,7 +909,7 @@ const VideoDetail = (props: { id: string; onBack: () => void }) => {
           <div>
             {/* 返回按鈕 */}
             <button onClick={props.onBack} style={mediaBackBtn(isDark())}>
-              ← 返回
+              ← {t("global.back")}
             </button>
 
             {/* 背景模糊层 */}
@@ -1108,7 +1110,7 @@ const VideoDetail = (props: { id: string; onBack: () => void }) => {
                     <span
                       style={{ color: authorLabelColor(), "font-size": "13px" }}
                     >
-                      主演：
+                      {t("media.video.cast")}
                     </span>
                     <span style={{ color: authorColor(), "font-size": "13px" }}>
                       {authors().slice(0, 5).join(" / ")}
@@ -1128,7 +1130,10 @@ const VideoDetail = (props: { id: string; onBack: () => void }) => {
                     title={
                       currentEpisode()
                         ? currentEpisode()!.index > 0
-                          ? `第${currentEpisode()!.index}集 ${currentEpisode()!.title}`
+                          ? t("media.video.episode", {
+                              index: currentEpisode()!.index,
+                              title: currentEpisode()!.title || "",
+                            })
                           : currentEpisode()!.title
                         : undefined
                     }
@@ -1160,7 +1165,7 @@ const VideoDetail = (props: { id: string; onBack: () => void }) => {
                       onClick={() => downloadStrm(data())}
                       style={mediaSecondaryBtn(isDark())}
                     >
-                      下载 STRM
+                      {t("media.video.download_strm")}
                     </button>
                   </div>
                 </Show>
@@ -1181,7 +1186,9 @@ const VideoDetail = (props: { id: string; onBack: () => void }) => {
                             "margin-bottom": "12px",
                           }}
                         >
-                          选集（共 {episodes.length} 集）
+                          {t("media.video.episode_count", {
+                            count: episodes.length,
+                          })}
                         </h3>
                         <div
                           style={{
@@ -1200,7 +1207,10 @@ const VideoDetail = (props: { id: string; onBack: () => void }) => {
                                 currentEpisode()?.file_name === ep.file_name
                               const label =
                                 ep.index > 0
-                                  ? `第${ep.index}集${ep.title ? " " + ep.title : ""}`
+                                  ? t("media.video.episode", {
+                                      index: ep.index,
+                                      title: ep.title || "",
+                                    })
                                   : ep.title || ep.file_name
                               return (
                                 <button
@@ -1261,7 +1271,7 @@ const VideoDetail = (props: { id: string; onBack: () => void }) => {
                         "margin-bottom": "8px",
                       }}
                     >
-                      剧情简介
+                      {t("media.video.summary")}
                     </h3>
                     <p
                       style={{
@@ -1344,10 +1354,14 @@ const VideoLibrary = () => {
                         item.release_date?.slice(0, 4),
                         item.genre?.split(",").slice(0, 2).join("/"),
                         item.duration
-                          ? `${Math.floor(item.duration / 60)} 分钟`
+                          ? t("media.video.minutes", {
+                              count: Math.floor(item.duration / 60),
+                            })
                           : "",
                         parseEpisodes(item.episodes).length > 0
-                          ? `${parseEpisodes(item.episodes).length} 集`
+                          ? t("media.video.episodes", {
+                              count: parseEpisodes(item.episodes).length,
+                            })
                           : formatMediaSize(item.file_size),
                       ]
                         .filter(Boolean)
@@ -1363,7 +1377,7 @@ const VideoLibrary = () => {
                           "white-space": "nowrap",
                         }}
                       >
-                        演员：
+                        {t("media.video.cast")}
                         {parseAuthors(item.authors).slice(0, 4).join(" / ")}
                       </div>
                     </Show>

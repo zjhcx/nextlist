@@ -1,6 +1,6 @@
-import { createEffect, For, onCleanup } from "solid-js"
-import { local, setLocal } from "~/store/local_settings"
-import { ACCENT_PRESETS, accentPaletteStyleVars } from "~/store/accent"
+import { createEffect, onCleanup } from "solid-js"
+import { getSetting } from "~/store/settings"
+import { accentPaletteStyleVars } from "~/store/accent"
 
 const defaults = {
   background: "",
@@ -11,7 +11,7 @@ const defaults = {
 }
 type Name = keyof typeof defaults
 const key = (name: string) => `appearance_${name}`
-const value = (name: Name) => local[key(name)] ?? defaults[name]
+const value = (name: Name) => getSetting(key(name)) || defaults[name]
 const number = (
   name: "card_opacity" | "component_opacity" | "blur",
   min: number,
@@ -81,8 +81,7 @@ export const applyAppearancePalette = (theme: string, dark: boolean) => {
       COMPONENT_STEPS.forEach((step) => {
         const k = `--hope-colors-${scale}${step}`
         const base = vars[k] ?? computed.getPropertyValue(k).trim()
-        if (base)
-          vars[k] = `color-mix(in srgb, ${base} ${alpha}%, transparent)`
+        if (base) vars[k] = `color-mix(in srgb, ${base} ${alpha}%, transparent)`
       }),
     )
   }
@@ -114,91 +113,7 @@ export function AppearanceBackground() {
 }
 
 /** Reactive dependency helper so palette effects rerun on changes. */
-export const appearancePaletteDeps = () => [siteThemeColor(), componentOpacity()]
-
-export function AppearanceSettings() {
-  return (
-    <fieldset class="appearance-settings">
-      <legend>外观 · Appearance</legend>
-      <p>设置自动保存在当前浏览器，清空图片地址可恢复纯灰背景。</p>
-
-      <label>
-        主题色 / Theme color <output>{siteThemeColor() || "默认 / Default"}</output>
-      </label>
-      <div class="appearance-swatches">
-        <For each={ACCENT_PRESETS}>
-          {(preset) => (
-            <button
-              type="button"
-              class="appearance-swatch"
-              title={preset.name}
-              aria-label={preset.name}
-              aria-pressed={siteThemeColor() === preset.color}
-              style={{ "background-color": preset.color }}
-              onClick={() => setLocal(key("theme"), preset.color)}
-            />
-          )}
-        </For>
-        <input
-          type="color"
-          aria-label="Custom theme color"
-          value={siteThemeColor() || "#2563eb"}
-          onInput={(e) => setLocal(key("theme"), e.currentTarget.value)}
-        />
-      </div>
-
-      <label for="appearance-background">背景图片 URL / Image URL</label>
-      <input
-        id="appearance-background"
-        type="url"
-        placeholder="https://…"
-        value={value("background")}
-        onInput={(e) => setLocal(key("background"), e.currentTarget.value)}
-      />
-      <label for="appearance-card-opacity">
-        卡片透明度 / Card opacity <output>{cardOpacity()}%</output>
-      </label>
-      <input
-        id="appearance-card-opacity"
-        type="range"
-        min="30"
-        max="100"
-        value={cardOpacity()}
-        onInput={(e) => setLocal(key("card_opacity"), e.currentTarget.value)}
-      />
-      <label for="appearance-component-opacity">
-        组件透明度 / Component opacity <output>{componentOpacity()}%</output>
-      </label>
-      <input
-        id="appearance-component-opacity"
-        type="range"
-        min="30"
-        max="100"
-        value={componentOpacity()}
-        onInput={(e) =>
-          setLocal(key("component_opacity"), e.currentTarget.value)
-        }
-      />
-      <label for="appearance-blur">
-        磨砂模糊 / Blur <output>{number("blur", 0, 32)}px</output>
-      </label>
-      <input
-        id="appearance-blur"
-        type="range"
-        min="0"
-        max="32"
-        value={number("blur", 0, 32)}
-        onInput={(e) => setLocal(key("blur"), e.currentTarget.value)}
-      />
-      <button
-        type="button"
-        onClick={() => {
-          for (const [name, initial] of Object.entries(defaults))
-            setLocal(key(name), initial)
-        }}
-      >
-        恢复默认 / Reset
-      </button>
-    </fieldset>
-  )
-}
+export const appearancePaletteDeps = () => [
+  siteThemeColor(),
+  componentOpacity(),
+]

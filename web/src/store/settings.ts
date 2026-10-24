@@ -1,11 +1,16 @@
+import { createStore } from "solid-js/store"
 import { ext, recordToArray, strToRegExp } from "~/utils"
 import { setBackendKind } from "~/utils/backend"
 
-const settings: Record<string, string> = {}
+const [settings, updateSettings] = createStore<Record<string, string>>({})
+
+export const embeddedSettings = (
+  window as Window & { OPENLIST_SETTINGS?: Record<string, string> }
+).OPENLIST_SETTINGS
 
 export const setSettings = (items: Record<string, string>) => {
   Object.keys(items).forEach((key) => {
-    settings[key] = items[key]
+    updateSettings(key, items[key])
   })
   // Detect backend kind (Go backend never returns the "backend" field)
   setBackendKind(settings["backend"])

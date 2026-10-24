@@ -20,7 +20,7 @@ import {
 import { Portal } from "solid-js/web"
 import { Error, FullScreenLoading } from "~/components"
 import { useLoading, useRouter, useT } from "~/hooks"
-import { setSettings } from "~/store"
+import { embeddedSettings, setSettings } from "~/store"
 import { setArchiveExtensions } from "~/store/archive"
 import { InitStatus, Resp } from "~/types"
 import {
@@ -93,6 +93,11 @@ const App: Component = () => {
   const [loading, data] = useLoading(() =>
     Promise.all([
       (async () => {
+        if (embeddedSettings) {
+          setSettings(embeddedSettings)
+          applyCustomize()
+          return
+        }
         const resp = (await r.get("/public/settings")) as Resp<
           Record<string, string>
         >

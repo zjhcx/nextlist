@@ -74,6 +74,7 @@ const Section = (props: {
 }) => {
   return (
     <Box
+      class="seed-section"
       w="$full"
       border="1px solid $neutral6"
       borderRadius="$lg"
@@ -220,7 +221,7 @@ const SeedSettings = () => {
 
   return (
     <MaybeLoading loading={loading()}>
-      <VStack w="$full" alignItems="stretch" spacing="$4">
+      <VStack class="seed-settings" w="$full" alignItems="stretch" spacing="$4">
         <Section title={t("settings_seed.site_config")}>
           <FormControl w="$full">
             <FormLabel for="seed_site_url">

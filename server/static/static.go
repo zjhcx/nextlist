@@ -9,6 +9,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"sync"
+
+	"github.com/OpenListTeam/OpenList/v4/internal/op"
 	"strings"
 
 	"github.com/OpenListTeam/OpenList/v4/drivers/base"
@@ -107,7 +111,11 @@ func initIndex(siteConfig SiteConfig) {
 	UpdateIndex()
 }
 
+var indexUpdateMu sync.RWMutex
+
 func UpdateIndex() {
+	indexUpdateMu.Lock()
+	defer indexUpdateMu.Unlock()
 	utils.Log.Debug("Updating index.html with settings...")
 	favicon := setting.GetStr(conf.Favicon)
 	logo := strings.Split(setting.GetStr(conf.Logo), "\n")[0]
@@ -122,14 +130,56 @@ func UpdateIndex() {
 		"Loading...":                           title,
 		"main_color: undefined":                fmt.Sprintf("main_color: '%s'", mainColor),
 	}
-	conf.ManageHtml = replaceStrings(conf.RawIndexHtml, replaceMap1)
+	// json.Marshal escapes HTML characters, including script closing tags.
+	publicSettings, err := op.GetPublicSettingItems()
+	if err != nil {
+		utils.Log.Errorf("Failed to load public settings for index: %v", err)
+		return
+	}
+	values := make(map[string]string, len(publicSettings))
+	for _, item := range publicSettings {
+		values[item.Key] = item.Value
+	}
+	payload, err := json.Marshal(values)
+	if err != nil {
+		utils.Log.Errorf("Failed to encode public settings: %v", err)
+		return
+	}
+	injected := strings.Replace(conf.RawIndexHtml, "</head>", "<script>window.OPENLIST_SETTINGS="+string(payload)+";</script></head>", 1)
+	conf.ManageHtml = replaceStrings(injected, replaceMap1)
 	utils.Log.Debug("Applying replacements for manage pages...")
 	replaceMap2 := map[string]string{
 		"<!-- customize head -->": customizeHead,
 		"<!-- customize body -->": customizeBody,
 	}
 	conf.IndexHtml = replaceStrings(conf.ManageHtml, replaceMap2)
+	for name, content := range map[string]string{"index.html": conf.IndexHtml, "manage.html": conf.ManageHtml} {
+		if err := cacheHTML(name, content); err != nil {
+			utils.Log.Errorf("Failed to cache %s: %v", name, err)
+		}
+	}
 	utils.Log.Debug("Index.html update completed")
+}
+
+// cacheHTML publishes complete files atomically; requests use the in-memory copy.
+func cacheHTML(name, content string) error {
+	dir := filepath.Join(conf.DataDir, "cache", "web")
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+	file, err := os.CreateTemp(dir, ".html-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(file.Name())
+	if _, err := file.WriteString(content); err != nil {
+		file.Close()
+		return err
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
+	return os.Rename(file.Name(), filepath.Join(dir, name))
 }
 
 func manifestIcon(src string) ManifestIcon {
@@ -225,6 +275,8 @@ func Static(r *gin.RouterGroup, noRoute func(handlers ...gin.HandlerFunc)) {
 		}
 		c.Header("Content-Type", "text/html")
 		c.Status(200)
+		indexUpdateMu.RLock()
+		defer indexUpdateMu.RUnlock()
 		if strings.HasPrefix(c.Request.URL.Path, "/@manage") {
 			_, _ = c.Writer.WriteString(conf.ManageHtml)
 		} else {

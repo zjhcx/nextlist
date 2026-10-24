@@ -31,7 +31,6 @@ import { FaSolidMinus, FaSolidPlus } from "solid-icons/fa"
 import { SwitchLanguageWhite, SwitchColorMode } from "~/components"
 import { useT } from "~/hooks"
 import { initialLocalSettings, local, LocalSetting, setLocal } from "~/store"
-import { AppearanceSettings } from "~/components/Appearance"
 import { bus } from "~/utils"
 
 function LocalSettingEdit(props: LocalSetting) {
@@ -146,7 +145,6 @@ export const LocalSettings = () => {
           {t("home.toolbar.local_settings")}
         </DrawerHeader>
         <DrawerBody>
-          <AppearanceSettings />
           <VStack spacing="$2">
             <For each={initialLocalSettings.filter((s) => !s.hidden)}>
               {(setting) => <LocalSettingEdit {...setting} />}

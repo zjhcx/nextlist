@@ -115,6 +115,11 @@ func InitialSettings() []model.SettingItem {
 		{Key: conf.AllowMounted, Value: "true", Type: conf.TypeBool, Group: model.SITE},
 		{Key: conf.RobotsTxt, Value: "User-agent: *\nAllow: /", Type: conf.TypeText, Group: model.SITE},
 		// style settings
+		{Key: "appearance_background", Value: "", Type: conf.TypeString, Group: model.STYLE, Help: "背景图片 URL（留空使用默认背景）"},
+		{Key: "appearance_theme", Value: "", Type: conf.TypeString, Group: model.STYLE, Help: "主题色（#RRGGBB，留空使用站点主色）"},
+		{Key: "appearance_card_opacity", Value: "100", Type: conf.TypeNumber, Group: model.STYLE, Help: "卡片不透明度（30–100）"},
+		{Key: "appearance_component_opacity", Value: "100", Type: conf.TypeNumber, Group: model.STYLE, Help: "组件不透明度（30–100）"},
+		{Key: "appearance_blur", Value: "0", Type: conf.TypeNumber, Group: model.STYLE, Help: "磨砂模糊半径（0–32 px）"},
 		{Key: conf.Logo, Value: "https://res.oplist.org/logo/logo.svg", MigrationValue: "https://cdn.oplist.org/gh/OpenListTeam/Logo@main/logo.svg", Type: conf.TypeText, Group: model.STYLE},
 		{Key: conf.Favicon, Value: "https://res.oplist.org/logo/logo.svg", MigrationValue: "https://cdn.oplist.org/gh/OpenListTeam/Logo@main/logo.svg", Type: conf.TypeString, Group: model.STYLE},
 		{Key: conf.MainColor, Value: "#1890ff", Type: conf.TypeString, Group: model.STYLE},

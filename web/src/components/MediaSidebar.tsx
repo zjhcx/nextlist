@@ -1,4 +1,4 @@
-﻿import {
+import {
   Anchor,
   Box,
   Button,
@@ -80,7 +80,7 @@ export const MediaSidebar = () => {
       })
     } catch {
       setLoggingOut(false)
-      notify.error("Sign out failed")
+      notify.error(t("media.sidebar.logout_failed"))
     }
   }
   const items = createMemo<NavEntry[]>(() => {
@@ -191,7 +191,7 @@ export const MediaSidebar = () => {
             colorScheme="neutral"
             px="$1"
             minW="0"
-            aria-label="collapse media sidebar"
+            aria-label={t("media.sidebar.collapse")}
             onClick={() => setMediaSidebarOpen(false)}
           >
             <Icon as={TbChevronLeft} boxSize="$4" />
@@ -228,7 +228,7 @@ export const MediaSidebar = () => {
               OpenList
             </Text>
             <HStack spacing="$1" alignItems="center" justifyContent="flex-end">
-              <Tooltip label="GitHub Repository">
+              <Tooltip label={t("media.sidebar.github")}>
                 <Anchor
                   href="https://github.com/OpenListTeam/OpenList"
                   external
@@ -243,7 +243,7 @@ export const MediaSidebar = () => {
                   <Icon as={TbBrandGithub} boxSize="$4" />
                 </Anchor>
               </Tooltip>
-              <Tooltip label="Documentation">
+              <Tooltip label={t("media.sidebar.docs")}>
                 <Anchor
                   href="https://doc.oplist.org"
                   external
@@ -258,7 +258,7 @@ export const MediaSidebar = () => {
                   <Icon as={TbBook2} boxSize="$4" />
                 </Anchor>
               </Tooltip>
-              <Tooltip label="Theme color">
+              <Tooltip label={t("media.sidebar.theme_color")}>
                 <Button
                   size="xs"
                   variant="ghost"
@@ -267,7 +267,7 @@ export const MediaSidebar = () => {
                   h="$6"
                   minW="$6"
                   p="0"
-                  aria-label="theme color"
+                  aria-label={t("media.sidebar.theme_color")}
                   onClick={() => setShowPalette(!showPalette())}
                 >
                   <Icon as={TbPalette} boxSize="$4" />
@@ -281,7 +281,11 @@ export const MediaSidebar = () => {
             </Text>
             <HStack spacing="$1" alignItems="center" justifyContent="flex-end">
               <Tooltip
-                label={colorMode() === "dark" ? "Light mode" : "Dark mode"}
+                label={
+                  colorMode() === "dark"
+                    ? t("media.sidebar.light")
+                    : t("media.sidebar.dark")
+                }
               >
                 <Button
                   size="xs"
@@ -291,7 +295,7 @@ export const MediaSidebar = () => {
                   h="$6"
                   minW="$6"
                   p="0"
-                  aria-label="toggle color mode"
+                  aria-label={t("media.sidebar.toggle_color")}
                   onClick={toggleColorMode}
                 >
                   <Icon
@@ -304,7 +308,7 @@ export const MediaSidebar = () => {
                 when={UserMethods.is_guest(me())}
                 fallback={
                   <>
-                    <Tooltip label="设置">
+                    <Tooltip label={t("media.sidebar.settings")}>
                       <Button
                         variant={manageActive() ? "subtle" : "ghost"}
                         colorScheme={manageActive() ? "accent" : "neutral"}
@@ -313,13 +317,13 @@ export const MediaSidebar = () => {
                         h="$6"
                         minW="$6"
                         p="0"
-                        aria-label="设置"
+                        aria-label={t("media.sidebar.settings")}
                         onClick={() => to("/@manage/media/settings")}
                       >
                         <Icon as={TbSettings} boxSize="$4" />
                       </Button>
                     </Tooltip>
-                    <Tooltip label="退出登录">
+                    <Tooltip label={t("media.sidebar.logout")}>
                       <Button
                         size="xs"
                         variant="ghost"
@@ -329,7 +333,7 @@ export const MediaSidebar = () => {
                         minW="$6"
                         p="0"
                         loading={loggingOut()}
-                        aria-label="退出登录"
+                        aria-label={t("media.sidebar.logout")}
                         onClick={logout}
                       >
                         <Icon as={TbLogout} boxSize="$4" />
@@ -338,14 +342,14 @@ export const MediaSidebar = () => {
                   </>
                 }
               >
-                <Tooltip label="登录">
+                <Tooltip label={t("media.sidebar.login")}>
                   <Button
                     size="xs"
                     variant="ghost"
                     colorScheme="neutral"
                     minW="0"
                     px="$1"
-                    aria-label="登录"
+                    aria-label={t("media.sidebar.login")}
                     onClick={() =>
                       to(
                         `/@login?redirect=${encodeURIComponent(location.pathname)}`,
@@ -355,14 +359,14 @@ export const MediaSidebar = () => {
                     <Icon as={TbLogin} boxSize="$4" />
                   </Button>
                 </Tooltip>
-                <Tooltip label="设置">
+                <Tooltip label={t("media.sidebar.settings")}>
                   <Button
                     size="xs"
                     variant="ghost"
                     colorScheme="neutral"
                     minW="0"
                     px="$1"
-                    aria-label="设置"
+                    aria-label={t("media.sidebar.settings")}
                     onClick={() => to("/@manage/media/settings")}
                   >
                     <Icon as={TbSettings} boxSize="$4" />
@@ -455,6 +459,7 @@ export const MediaSidebar = () => {
  * 管理后台等页面没有 Home 的顶栏，需要这个入口才能重新展开。
  */
 export const MediaSidebarFloatingTrigger = () => {
+  const t = useT()
   return (
     <Show when={mediaEnabled() && !mediaSidebarOpen()}>
       <Button
@@ -469,7 +474,7 @@ export const MediaSidebarFloatingTrigger = () => {
         shadow="$md"
         px="$3"
         onClick={() => setMediaSidebarOpen(true)}
-        aria-label="expand media sidebar"
+        aria-label={t("media.sidebar.expand")}
       >
         <Text fontSize="$md">»</Text>
       </Button>
@@ -479,6 +484,7 @@ export const MediaSidebarFloatingTrigger = () => {
 
 /** 顶栏中的侧边栏开关（媒体库启用时才渲染） */
 export const MediaSidebarTrigger = () => {
+  const t = useT()
   return (
     <Show when={mediaEnabled()}>
       <Button
@@ -487,7 +493,7 @@ export const MediaSidebarTrigger = () => {
         size="sm"
         px="$2"
         onClick={() => setMediaSidebarOpen(!mediaSidebarOpen())}
-        aria-label="media sidebar"
+        aria-label={t("media.sidebar.toggle")}
       >
         <Icon
           as={() => (

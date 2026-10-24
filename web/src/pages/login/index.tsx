@@ -25,7 +25,6 @@ import {
   hashPwd,
 } from "~/utils"
 import { PResp, Resp } from "~/types"
-import LoginBg from "./LoginBg"
 import { createStorageSignal } from "@solid-primitives/storage"
 import { getSetting, getSettingBool } from "~/store"
 import { SSOLogin } from "./SSOLogin"
@@ -227,8 +226,9 @@ const Login = () => {
   }
 
   return (
-    <Center zIndex="$docked" w="$full" h="100vh">
+    <Center class="login-page" zIndex="$docked" w="$full" minH="100dvh" py="$8">
       <VStack
+        class="login-card"
         bgColor={bgColor()}
         rounded="$xl"
         p="24px"
@@ -372,7 +372,7 @@ const Login = () => {
           </Show>
         </Flex>
       </VStack>
-      <LoginBg />
+
     </Center>
   )
 }

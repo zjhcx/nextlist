@@ -1,12 +1,6 @@
 import { useFetch, useT, useRouter, useManageTitle } from "~/hooks"
-import { Group, SettingItem, PResp, PEmptyResp, EmptyResp, Resp } from "~/types"
-import {
-  r,
-  notify,
-  getTarget,
-  handleResp,
-  handleRespWithoutAuthAndNotify,
-} from "~/utils"
+import { Group, SettingItem, PResp, PEmptyResp, EmptyResp } from "~/types"
+import { r, notify, getTarget, handleResp } from "~/utils"
 import { createStore } from "solid-js/store"
 import { Button, HStack, VStack } from "@hope-ui/solid"
 import { createMemo, createSignal, Index } from "solid-js"
@@ -89,11 +83,12 @@ const CommonSettings = (props: CommonSettingsProps) => {
             const resp = await saveSettings()
             handleResp(resp, async () => {
               notify.success(t("global.save_success"))
-              handleRespWithoutAuthAndNotify(
-                (await r.get("/public/settings")) as Resp<
-                  Record<string, string>
-                >,
-                renewSettings,
+              renewSettings(
+                Object.fromEntries(
+                  settings
+                    .filter((item) => item.flag === 0)
+                    .map((item) => [item.key, item.value]),
+                ),
               )
             })
           }}

@@ -32,13 +32,21 @@ export type ItemProps = SettingItem & {
   readOnly?: boolean
 }
 
+const appearanceLabels: Record<string, string> = {
+  appearance_background: "背景图片 URL / Background image",
+  appearance_theme: "主题色 / Theme color",
+  appearance_card_opacity: "卡片不透明度 / Card opacity",
+  appearance_component_opacity: "组件不透明度 / Component opacity",
+  appearance_blur: "磨砂模糊 / Backdrop blur",
+}
+
 const Item = (props: ItemProps) => {
   const t = useT()
   return (
     <FormControl w={props.w ?? "100%"} display="flex" flexDirection="column">
       <Show when={!props.hideLabel}>
         <FormLabel for={props.key} display="flex" alignItems="center">
-          {t(`settings.${props.key}`)}
+          {t(`settings.${props.key}`, undefined, appearanceLabels[props.key])}
           <Show when={props.flag === Flag.DEPRECATED}>
             <Icon
               ml="$2"

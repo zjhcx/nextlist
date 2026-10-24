@@ -56,8 +56,8 @@ func SaveSettings(c *gin.Context) {
 	if err := op.SaveSettingItems(req); err != nil {
 		common.ErrorResp(c, err, 500)
 	} else {
-		common.SuccessResp(c)
 		static.UpdateIndex()
+		common.SuccessResp(c)
 	}
 }
 
