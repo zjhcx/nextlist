@@ -23,6 +23,7 @@ const MediaScrapePage = () => {
   const t = useT()
   return (
     <VStack
+      class="media-settings-page"
       w="$full"
       alignItems="stretch"
       spacing="$4"
@@ -38,6 +39,32 @@ const MediaScrapePage = () => {
       <CommonSettings
         group={Group.MEDIA}
         keys={SCRAPE_KEYS}
+        sections={[
+          {
+            title: "media_settings.providers",
+            keys: [
+              "media_tmdb_key",
+              "media_tmdb_api_url",
+              "media_discogs_token",
+              "media_discogs_api_url",
+              "media_book_source",
+              "media_google_books_key",
+            ],
+          },
+          {
+            title: "media_settings.preferences",
+            keys: ["media_scrape_language", "media_scrape_concurrency"],
+          },
+          {
+            title: "media_settings.covers",
+            keys: [
+              "media_download_cover",
+              "media_store_thumbnail",
+              "media_thumbnail_mode",
+              "media_thumbnail_path",
+            ],
+          },
+        ]}
         readOnlyKey={(key, all) => {
           if (key !== "media_thumbnail_path") return false
           const mode = all.find((i) => i.key === "media_thumbnail_mode")?.value

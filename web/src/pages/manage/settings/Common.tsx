@@ -2,14 +2,15 @@ import { useFetch, useT, useRouter, useManageTitle } from "~/hooks"
 import { Group, SettingItem, PResp, PEmptyResp, EmptyResp } from "~/types"
 import { r, notify, getTarget, handleResp } from "~/utils"
 import { createStore } from "solid-js/store"
-import { Button, HStack, VStack } from "@hope-ui/solid"
-import { createMemo, createSignal, Index } from "solid-js"
+import { Box, Button, Heading, HStack, VStack } from "@hope-ui/solid"
+import { createMemo, createSignal, For, Index, Show } from "solid-js"
 import { Item } from "./SettingItem"
 import { ResponsiveGrid } from "../common/ResponsiveGrid"
 import { setSettings as renewSettings } from "~/store"
 
 export interface CommonSettingsProps {
   group: Group
+  sections?: { title: string; keys: string[] }[]
   /** 只渲染指定的设置项（不传则渲染整个分组），用于把媒体库设置拆成多个页面 */
   keys?: string[]
   /** 根据其它设置项的当前值决定某一项是否只读 */
@@ -18,7 +19,10 @@ export interface CommonSettingsProps {
 const CommonSettings = (props: CommonSettingsProps) => {
   const t = useT()
   const { pathname } = useRouter()
-  useManageTitle(`manage.sidemenu.${pathname().split("/").pop()}`)
+  const page = pathname().split("/").pop()
+  useManageTitle(
+    `manage.sidemenu.${pathname().startsWith("/@manage/media/") ? "media_" : ""}${page}`,
+  )
   const [settingsLoading, getSettings] = useFetch((): PResp<SettingItem[]> =>
     r.get(`/admin/setting/list?group=${props.group}`),
   )
@@ -43,33 +47,58 @@ const CommonSettings = (props: CommonSettingsProps) => {
       .map((key) => map.get(key))
       .filter((item): item is SettingItem => !!item)
   })
+  const renderItems = (items: SettingItem[]) => (
+    <ResponsiveGrid>
+      <Index each={items}>
+        {(item) => (
+          <Item
+            {...item()}
+            readOnly={props.readOnlyKey?.(item().key, settings) === true}
+            onChange={(val) => {
+              setSettings((i) => item().key === i.key, "value", val)
+            }}
+            onDelete={async () => {
+              setLoading(true)
+              const resp: EmptyResp = await r.post(
+                `/admin/setting/delete?key=${item().key}`,
+              )
+              setLoading(false)
+              handleResp(resp, () => {
+                notify.success(t("global.delete_success"))
+                refresh()
+              })
+            }}
+          />
+        )}
+      </Index>
+    </ResponsiveGrid>
+  )
   return (
-    <VStack w="$full" alignItems="start" spacing="$2">
-      <ResponsiveGrid>
-        <Index each={visible()}>
-          {(item) => (
-            <Item
-              {...item()}
-              readOnly={props.readOnlyKey?.(item().key, settings) === true}
-              onChange={(val) => {
-                setSettings((i) => item().key === i.key, "value", val)
-              }}
-              onDelete={async () => {
-                setLoading(true)
-                const resp: EmptyResp = await r.post(
-                  `/admin/setting/delete?key=${item().key}`,
-                )
-                setLoading(false)
-                handleResp(resp, () => {
-                  notify.success(t("global.delete_success"))
-                  refresh()
-                })
-              }}
-            />
+    <VStack
+      class={
+        props.group === Group.MEDIA || props.group === Group.TRANSCODE
+          ? "media-settings-form"
+          : undefined
+      }
+      w="$full"
+      alignItems="start"
+      spacing="$2"
+    >
+      <Show when={props.sections} fallback={renderItems(visible())}>
+        <For each={props.sections}>
+          {(section) => (
+            <Box as="section" class="media-settings-section" w="$full">
+              <Heading as="h2" size="base">
+                {t(section.title)}
+              </Heading>
+              {renderItems(
+                visible().filter((item) => section.keys.includes(item.key)),
+              )}
+            </Box>
           )}
-        </Index>
-      </ResponsiveGrid>
-      <HStack spacing="$2">
+        </For>
+      </Show>
+      <HStack class="settings-actions" spacing="$2" flexWrap="wrap" gap="$2">
         <Button
           colorScheme="accent"
           onClick={refresh}

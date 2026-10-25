@@ -1,0 +1,50 @@
+name: Build repository frontend
+description: Build and test the frontend in web without downloading an upstream release.
+inputs:
+  build-type:
+    description: standard or lite
+    default: standard
+  version:
+    description: Frontend version; defaults to the package version and commit.
+    default: ''
+outputs:
+  version:
+    description: Version written to web/dist/VERSION.
+    value: ${{ steps.build.outputs.version }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version: '24'
+    - name: Install pinned pnpm
+      shell: bash
+      working-directory: web
+      run: npm install --global "$(node -p "require('./package.json').packageManager")"
+    - name: Locate pnpm cache
+      id: store
+      shell: bash
+      working-directory: web
+      run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ steps.store.outputs.path }}
+        key: ${{ runner.os }}-pnpm-${{ hashFiles('web/package.json', 'web/pnpm-lock.yaml', 'web/pnpm-workspace.yaml', 'web/patches/**') }}
+        restore-keys: ${{ runner.os }}-pnpm-
+    - name: Install frontend dependencies
+      shell: bash
+      working-directory: web
+      env:
+        HUSKY: '0'
+      run: pnpm install --frozen-lockfile
+    - name: Frontend tests
+      shell: bash
+      working-directory: web
+      run: pnpm test
+    - name: Build frontend
+      id: build
+      shell: bash
+      env:
+        FRONTEND_BUILD_TYPE: ${{ inputs.build-type }}
+        OPENLIST_FRONTEND_VERSION: ${{ inputs.version }}
+      run: bash .github/scripts/build-frontend.sh "$FRONTEND_BUILD_TYPE"

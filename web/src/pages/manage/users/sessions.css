@@ -1,0 +1,23 @@
+.session-device-card {
+  background: rgba(var(--glass-rgb), min(var(--card-opacity, 75%), 75%));
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(max(var(--glass-blur, 0px), 12px));
+  -webkit-backdrop-filter: blur(max(var(--glass-blur, 0px), 12px));
+}
+
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .session-device-card {
+    background: rgb(var(--glass-rgb));
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .session-device-card {
+    background: rgb(var(--glass-rgb));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}

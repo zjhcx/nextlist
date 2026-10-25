@@ -1,4 +1,5 @@
 import { SideMenuItemProps } from "./SideMenu"
+import { sessionText } from "./users/session-translations"
 import {
   BsGearFill,
   BsPaletteFill,
@@ -43,6 +44,16 @@ export const side_menu_items: SideMenuItem[] = [
     to: "/@manage",
     role: UserRole.GUEST,
     component: lazy(() => import("./users/Profile")),
+  },
+  {
+    get title() {
+      return sessionText("sessions")
+    },
+    icon: BsHddNetwork,
+    to: "/@manage/sessions",
+    role: UserRole.GENERAL,
+    backend: ["go"],
+    component: lazy(() => import("./users/Sessions")),
   },
   {
     title: "manage.sidemenu.settings",
@@ -114,7 +125,7 @@ export const side_menu_items: SideMenuItem[] = [
         title: "manage.sidemenu.transcode",
         icon: BsCameraFill,
         to: "/@manage/settings/transcode",
-        component: () => <CommonSettings group={Group.TRANSCODE} />,
+        component: lazy(() => import("./media/MediaTranscodePage")),
       },
       {
         title: "manage.sidemenu.other",
@@ -251,7 +262,7 @@ export const side_menu_items: SideMenuItem[] = [
         title: "manage.sidemenu.media_transcode",
         icon: BsGearFill,
         to: "/@manage/media/transcode",
-        component: () => <CommonSettings group={Group.TRANSCODE} />,
+        component: lazy(() => import("./media/MediaTranscodePage")),
       },
       {
         title: "manage.sidemenu.media_video",

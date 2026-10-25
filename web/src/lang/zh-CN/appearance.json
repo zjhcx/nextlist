@@ -1,0 +1,12 @@
+{
+  "appearance_background": "背景图片 URL",
+  "appearance_background-tips": "留空使用默认背景。",
+  "appearance_theme": "主题色",
+  "appearance_theme-tips": "使用 #RRGGBB 格式，留空使用站点主色。",
+  "appearance_card_opacity": "卡片不透明度",
+  "appearance_card_opacity-tips": "卡片不透明度，范围为 30–100%。",
+  "appearance_component_opacity": "组件不透明度",
+  "appearance_component_opacity-tips": "组件不透明度，范围为 30–100%。",
+  "appearance_blur": "磨砂模糊",
+  "appearance_blur-tips": "背景模糊半径，范围为 0–32 像素。"
+}

@@ -13,6 +13,30 @@ const entryModules = import.meta.glob<{ dict: RawDictionary }>(
   "~/lang/*/entry.ts",
 )
 
+// Keep appearance translations independent of generated language entry files.
+const appearanceModules = import.meta.glob<Record<string, string>>(
+  "~/lang/*/appearance.json",
+  { eager: true, import: "default" },
+)
+const appearanceDictionary = (locale: string) => {
+  const english = appearanceModules["/src/lang/en/appearance.json"] ?? {}
+  const translated =
+    appearanceModules[`/src/lang/${locale}/appearance.json`] ?? {}
+  return Object.fromEntries(
+    Object.entries({ ...english, ...translated }).map(([key, value]) => [
+      `appearance.${key}`,
+      value,
+    ]),
+  )
+}
+
+const mediaSettingsModules = import.meta.glob<Record<string, unknown>>(
+  "~/lang/*/media_settings.json",
+  { eager: true, import: "default" },
+)
+const mediaSettingsDictionary = (locale: string) =>
+  i18n.flatten(mediaSettingsModules[`/src/lang/${locale}/media_settings.json`] ?? {})
+
 // all available languages
 export const languages = Object.keys(langs).map((langPath) => {
   const langCode = langPath.split("/")[3]
@@ -50,7 +74,11 @@ let enDictCache: Dictionary | null = null
 const fetchEnDict = async (): Promise<Dictionary> => {
   if (!enDictCache) {
     const dict: RawDictionary = (await import("~/lang/en/entry")).dict
-    enDictCache = i18n.flatten(dict)
+    enDictCache = {
+      ...i18n.flatten(dict),
+      ...appearanceDictionary("en"),
+      ...mediaSettingsDictionary("en"),
+    } as Dictionary
   }
   return enDictCache
 }
@@ -64,10 +92,19 @@ const fetchDictionary = async (locale: Lang): Promise<Dictionary> => {
     // If not English, merge with English as fallback (English keys underneath, locale on top)
     if (locale !== "en") {
       const enDict = await fetchEnDict()
-      return { ...enDict, ...flatDict } as Dictionary
+      return {
+        ...enDict,
+        ...flatDict,
+        ...appearanceDictionary(locale),
+        ...mediaSettingsDictionary(locale),
+      } as Dictionary
     }
 
-    return flatDict
+    return {
+      ...flatDict,
+      ...appearanceDictionary(locale),
+      ...mediaSettingsDictionary(locale),
+    } as Dictionary
   } catch (err) {
     console.error(`Error loading dictionary for locale: ${locale}`, err)
     // Fallback to English if the requested locale fails to load

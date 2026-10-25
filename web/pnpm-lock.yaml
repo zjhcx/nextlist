@@ -137,12 +137,6 @@ importers:
       remark-math:
         specifier: 6.0.0
         version: 6.0.0
-      seemly:
-        specifier: ^0.3.10
-        version: 0.3.10
-      sha256:
-        specifier: ^0.2.0
-        version: 0.2.0
       solid-contextmenu:
         specifier: 0.0.2
         version: 0.0.2(solid-js@1.9.15)(solid-transition-group@0.3.0(solid-js@1.9.15))
@@ -161,9 +155,6 @@ importers:
       streamsaver:
         specifier: ^2.0.6
         version: 2.0.6
-      typescript-natural-sort:
-        specifier: ^0.7.2
-        version: 0.7.2
     devDependencies:
       '@crowdin/cli':
         specifier: ^5.5.0

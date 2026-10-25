@@ -7,6 +7,17 @@ gitCommit=$(git log --pretty=format:"%h" -1)
 # Set frontend repository, default to OpenListTeam/OpenList-Frontend
 frontendRepo="${FRONTEND_REPO:-OpenListTeam/OpenList-Frontend}"
 
+# CI supplies the frontend built from this checkout. Fail rather than silently
+# replacing it with an upstream release when the prepared directory is invalid.
+frontendDir="${OPENLIST_FRONTEND_DIR:-}"
+if [ -n "$frontendDir" ]; then
+  frontendDir=$(cd "$frontendDir" && pwd -P)
+  if [ ! -s "$frontendDir/index.html" ] || [ ! -s "$frontendDir/VERSION" ]; then
+    echo "Prepared frontend requires index.html and VERSION: $frontendDir" >&2
+    exit 1
+  fi
+fi
+
 githubAuthArgs=""
 if [ -n "$GITHUB_TOKEN" ]; then
   githubAuthArgs="--header \"Authorization: Bearer $GITHUB_TOKEN\""
@@ -25,10 +36,19 @@ elif [ "$1" = "beta" ]; then
   version="beta"
   webVersion="rolling"
 else
-  git tag -d beta || true
   # Always true if there's no tag
-  version=$(git describe --abbrev=0 --tags 2>/dev/null || echo "v0.0.0")
-  webVersion=$(eval "curl -fsSL --max-time 2 $githubAuthArgs \"https://api.github.com/repos/$frontendRepo/releases/latest\"" | grep "tag_name" | head -n 1 | awk -F ":" '{print $2}' | sed 's/\"//g;s/,//g;s/ //g')
+  version=${OPENLIST_VERSION:-$(git describe --abbrev=0 --tags --match 'v[0-9]*' 2>/dev/null || echo "v0.0.0")}
+  if [ -z "$frontendDir" ] && [ "$1" != "prepare" ] && [ "$1" != "zip" ]; then
+    webVersion=$(eval "curl -fsSL --max-time 2 $githubAuthArgs \"https://api.github.com/repos/$frontendRepo/releases/latest\"" | grep "tag_name" | head -n 1 | awk -F ":" '{print $2}' | sed 's/\"//g;s/,//g;s/ //g')
+  fi
+fi
+
+if [ -n "$frontendDir" ]; then
+  webVersion=$(tr -d '\r\n' < "$frontendDir/VERSION")
+  if [ -z "$webVersion" ]; then
+    echo "Prepared frontend VERSION must not be empty" >&2
+    exit 1
+  fi
 fi
 
 echo "backend version: $version"
@@ -96,7 +116,30 @@ AssertStaticBinary() {
   return 0
 }
 
+UsePreparedWeb() {
+  if [ -z "$frontendDir" ]; then
+    return 1
+  fi
+  mkdir -p public/dist
+  local destination
+  destination=$(cd public/dist && pwd -P)
+  if [[ "$frontendDir" == "$destination/"* ]]; then
+    echo "Prepared frontend must not be nested inside public/dist" >&2
+    return 1
+  fi
+  if [ "$frontendDir" != "$destination" ]; then
+    # Remove stale hashed assets from previous local builds.
+    find public/dist -mindepth 1 -maxdepth 1 ! -name README.md -exec rm -rf -- {} +
+    cp -a "$frontendDir/." public/dist/
+  fi
+  echo "Using prepared frontend $webVersion from $frontendDir"
+}
+
 FetchWebRolling() {
+  if [ -n "$frontendDir" ]; then
+    UsePreparedWeb
+    return
+  fi
   pre_release_json=$(eval "curl -fsSL --max-time 2 $githubAuthArgs -H \"Accept: application/vnd.github.v3+json\" \"https://api.github.com/repos/$frontendRepo/releases/tags/edge\"")
   pre_release_assets=$(echo "$pre_release_json" | jq -r '.assets[].browser_download_url')
   
@@ -110,6 +153,10 @@ FetchWebRolling() {
 }
 
 FetchWebRelease() {
+  if [ -n "$frontendDir" ]; then
+    UsePreparedWeb
+    return
+  fi
   release_json=$(eval "curl -fsSL --max-time 2 $githubAuthArgs -H \"Accept: application/vnd.github.v3+json\" \"https://api.github.com/repos/$frontendRepo/releases/latest\"")
   release_assets=$(echo "$release_json" | jq -r '.assets[].browser_download_url')
   

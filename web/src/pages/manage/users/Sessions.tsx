@@ -1,8 +1,10 @@
 import { sessionText } from "./session-translations"
 import { Badge, Button, Heading, HStack, Text, VStack } from "@hope-ui/solid"
 import { createSignal, For, onMount, Show } from "solid-js"
-import { useFetch, useRouter } from "~/hooks"
-import { PEmptyResp, PResp } from "~/types"
+import "./sessions.css"
+import { useFetch, useRouter, useT, useTitle } from "~/hooks"
+import { me } from "~/store"
+import { PEmptyResp, PResp, UserMethods } from "~/types"
 import { changeToken, handleResp, handleRespWithoutNotify, r } from "~/utils"
 
 interface Session {
@@ -66,6 +68,7 @@ export const Sessions = () => {
       <For each={sessions()} fallback={<Text>{t("sessions_empty")}</Text>}>
         {(session) => (
           <VStack
+            class="session-device-card"
             w="$full"
             alignItems="start"
             spacing="$1"
@@ -105,3 +108,21 @@ export const Sessions = () => {
     </VStack>
   )
 }
+
+const SessionsPage = () => {
+  const t = useT()
+  const { to } = useRouter()
+  useTitle(() => `${sessionText("sessions")} | ${t("manage.title")}`)
+  onMount(() => {
+    if (UserMethods.is_guest(me())) {
+      to(`/@login?redirect=${encodeURIComponent(location.pathname)}`)
+    }
+  })
+  return (
+    <Show when={!UserMethods.is_guest(me())}>
+      <Sessions />
+    </Show>
+  )
+}
+
+export default SessionsPage

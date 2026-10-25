@@ -2,7 +2,19 @@ node_modules
 dist
 /src/lang/*
 !/src/lang/en/
+!/src/lang/zh-CN/
+!/src/lang/zh-TW/
+/src/lang/zh-CN/*
+/src/lang/zh-TW/*
+!/src/lang/zh-CN/appearance.json
+!/src/lang/zh-CN/media_settings.json
+!/src/lang/zh-TW/appearance.json
+!/src/lang/zh-TW/media_settings.json
 .DS_Store
 .idea
 .test
 .codebuddy
+
+# Ship locale sources with the frontend; CI does not require Crowdin credentials.
+!/src/lang/*/
+!/src/lang/*/*.json

@@ -119,7 +119,12 @@ export const ThumbnailSettings = (props: ThumbnailSettingsProps) => {
   }
 
   return (
-    <Box bgColor="$neutral1" rounded="$lg" border="1px solid $neutral4">
+    <Box
+      class="media-settings-card"
+      bgColor="$neutral1"
+      rounded="$lg"
+      border="1px solid $neutral4"
+    >
       <HStack
         px="$4"
         py="$3"
@@ -158,8 +163,11 @@ export const ThumbnailSettings = (props: ThumbnailSettingsProps) => {
         <VStack spacing="$4" alignItems="stretch" p="$4">
           <Show when={props.mediaType === "image"}>
             <FormControl display="flex" alignItems="center" gap="$2" w="auto">
-              <FormLabel m="0">{t("manage.media_lib.thumb_store")}</FormLabel>
+              <FormLabel for="media-thumb-store" m="0">
+                {t("manage.media_lib.thumb_store")}
+              </FormLabel>
               <Switch
+                id="media-thumb-store"
                 checked={storeThumbnail()}
                 onChange={(e) => setStoreThumbnail(e.currentTarget.checked)}
               />
@@ -170,10 +178,13 @@ export const ThumbnailSettings = (props: ThumbnailSettingsProps) => {
           </Show>
 
           <FormControl>
-            <FormLabel>{t("manage.media_lib.thumb_mode")}</FormLabel>
+            <FormLabel for="media-thumb-mode">
+              {t("manage.media_lib.thumb_mode")}
+            </FormLabel>
             <Select
+              id="media-thumb-mode"
               value={mode()}
-              onChange={(v) => setMode(v as "base64" | "local")}
+              onChange={(v) => setMode(v as "base64" | "runtime" | "local")}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -213,8 +224,11 @@ export const ThumbnailSettings = (props: ThumbnailSettingsProps) => {
 
           <Show when={mode() === "local"}>
             <FormControl>
-              <FormLabel>{t("manage.media_lib.thumb_path")}</FormLabel>
+              <FormLabel for="media-thumb-path">
+                {t("manage.media_lib.thumb_path")}
+              </FormLabel>
               <Input
+                id="media-thumb-path"
                 placeholder="/imgs"
                 value={path()}
                 onInput={(e) => setPath(e.currentTarget.value)}

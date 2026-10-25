@@ -32,21 +32,20 @@ export type ItemProps = SettingItem & {
   readOnly?: boolean
 }
 
-const appearanceLabels: Record<string, string> = {
-  appearance_background: "背景图片 URL / Background image",
-  appearance_theme: "主题色 / Theme color",
-  appearance_card_opacity: "卡片不透明度 / Card opacity",
-  appearance_component_opacity: "组件不透明度 / Component opacity",
-  appearance_blur: "磨砂模糊 / Backdrop blur",
-}
-
 const Item = (props: ItemProps) => {
   const t = useT()
+  const translationKey = () =>
+    `${props.key.startsWith("appearance_") ? "appearance" : "settings"}.${props.key}`
   return (
-    <FormControl w={props.w ?? "100%"} display="flex" flexDirection="column">
+    <FormControl
+      class="setting-field"
+      w={props.w ?? "100%"}
+      display="flex"
+      flexDirection="column"
+    >
       <Show when={!props.hideLabel}>
         <FormLabel for={props.key} display="flex" alignItems="center">
-          {t(`settings.${props.key}`, undefined, appearanceLabels[props.key])}
+          {t(translationKey())}
           <Show when={props.flag === Flag.DEPRECATED}>
             <Icon
               ml="$2"
@@ -120,7 +119,7 @@ const Item = (props: ItemProps) => {
         </Match>
       </Switch>
       <FormHelperText>
-        {props.help ? t(`settings.${props.key}-tips`) : ""}
+        {t(`${translationKey()}-tips`, undefined, props.help || " ")}
       </FormHelperText>
     </FormControl>
   )

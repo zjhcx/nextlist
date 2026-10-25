@@ -1,0 +1,12 @@
+{
+  "appearance_background": "背景圖片 URL",
+  "appearance_background-tips": "留空使用預設背景。",
+  "appearance_theme": "主題色",
+  "appearance_theme-tips": "使用 #RRGGBB 格式，留空使用網站主色。",
+  "appearance_card_opacity": "卡片不透明度",
+  "appearance_card_opacity-tips": "卡片不透明度，範圍為 30–100%。",
+  "appearance_component_opacity": "元件不透明度",
+  "appearance_component_opacity-tips": "元件不透明度，範圍為 30–100%。",
+  "appearance_blur": "毛玻璃模糊",
+  "appearance_blur-tips": "背景模糊半徑，範圍為 0–32 像素。"
+}

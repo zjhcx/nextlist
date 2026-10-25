@@ -52,6 +52,7 @@ const MediaStrmPage = () => {
 
   return (
     <VStack
+      class="media-settings-page"
       w="$full"
       alignItems="stretch"
       spacing="$4"
@@ -65,9 +66,23 @@ const MediaStrmPage = () => {
         </Text>
       </VStack>
 
-      <CommonSettings group={Group.MEDIA} keys={STRM_KEYS} />
+      <CommonSettings
+        group={Group.MEDIA}
+        keys={STRM_KEYS}
+        sections={[{ title: "media_settings.strm", keys: STRM_KEYS }]}
+        readOnlyKey={(key, all) =>
+          key === "media_strm_path" &&
+          all.find((item) => item.key === "media_strm_same_dir")?.value ===
+            "true"
+        }
+      />
 
-      <Box bgColor="$neutral1" rounded="$lg" border="1px solid $neutral4">
+      <Box
+        class="media-settings-card"
+        bgColor="$neutral1"
+        rounded="$lg"
+        border="1px solid $neutral4"
+      >
         <HStack px="$4" py="$3" borderBottom="1px solid $neutral4">
           <Heading size="sm">{t("manage.media_lib.strm_manual")}</Heading>
         </HStack>

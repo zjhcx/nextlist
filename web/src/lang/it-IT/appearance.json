@@ -1,0 +1,12 @@
+{
+  "appearance_background": "Background image URL",
+  "appearance_background-tips": "Leave empty to use the default background.",
+  "appearance_theme": "Theme color",
+  "appearance_theme-tips": "Use #RRGGBB; leave empty to use the site primary color.",
+  "appearance_card_opacity": "Card opacity",
+  "appearance_card_opacity-tips": "Card opacity from 30 to 100%.",
+  "appearance_component_opacity": "Component opacity",
+  "appearance_component_opacity-tips": "Component opacity from 30 to 100%.",
+  "appearance_blur": "Backdrop blur",
+  "appearance_blur-tips": "Backdrop blur radius from 0 to 32 px."
+}

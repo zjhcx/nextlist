@@ -41,6 +41,7 @@ const BASE_KEYS = [
   "media_subsonic_allow_password_auth",
   "media_subsonic_proxy_stream",
   "media_proxy_cover",
+  "media_cover_gateway",
 ]
 
 /**
@@ -77,7 +78,9 @@ const MediaSettingsPage = () => {
   }
 
   const createKey = async () => {
-    const resp = await adminCreateAppKey(keyName().trim() || "Media Key")
+    const resp = await adminCreateAppKey(
+      keyName().trim() || t("manage.media_lib.default_key_name"),
+    )
     if (resp.code === 200) {
       setPlainKey(resp.data.key)
       setKeyName("")
@@ -100,6 +103,7 @@ const MediaSettingsPage = () => {
 
   return (
     <VStack
+      class="media-settings-page"
       spacing="$5"
       alignItems="stretch"
       p={{ "@initial": "$3", "@md": "$6" }}
@@ -113,12 +117,21 @@ const MediaSettingsPage = () => {
       </VStack>
 
       {/* 服务端设置项：直接复用后台的 SettingItem 渲染器 */}
-      <CommonSettings group={Group.MEDIA} keys={BASE_KEYS} />
+      <CommonSettings
+        group={Group.MEDIA}
+        keys={BASE_KEYS}
+        sections={[{ title: "media_settings.general", keys: BASE_KEYS }]}
+      />
 
       <Divider />
 
       {/* 协议接入 */}
-      <Box bgColor="$neutral1" rounded="$lg" border="1px solid $neutral4">
+      <Box
+        class="media-settings-card"
+        bgColor="$neutral1"
+        rounded="$lg"
+        border="1px solid $neutral4"
+      >
         <HStack px="$4" py="$3" borderBottom="1px solid $neutral4">
           <Heading size="sm">{t("manage.media_lib.protocol")}</Heading>
         </HStack>
@@ -174,13 +187,20 @@ const MediaSettingsPage = () => {
       </Box>
 
       {/* 应用密钥 */}
-      <Box bgColor="$neutral1" rounded="$lg" border="1px solid $neutral4">
+      <Box
+        class="media-settings-card"
+        bgColor="$neutral1"
+        rounded="$lg"
+        border="1px solid $neutral4"
+      >
         <HStack
           px="$4"
           py="$3"
           borderBottom="1px solid $neutral4"
           justifyContent="space-between"
           alignItems="center"
+          flexWrap="wrap"
+          gap="$3"
         >
           <VStack alignItems="flex-start" spacing="2px">
             <Heading size="sm">{t("manage.media_lib.app_keys")}</Heading>
@@ -190,11 +210,12 @@ const MediaSettingsPage = () => {
           </VStack>
           <HStack spacing="$2">
             <FormControl display="flex" alignItems="center" gap="$2" w="auto">
-              <FormLabel m="0" fontSize="$sm">
+              <FormLabel for="media-key-name" m="0" fontSize="$sm">
                 {t("manage.media_lib.key_note")}
               </FormLabel>
               <Input
-                w="200px"
+                id="media-key-name"
+                w={{ "@initial": "100%", "@sm": "200px" }}
                 placeholder={t("manage.media_lib.key_note_placeholder")}
                 value={keyName()}
                 onInput={(e) => setKeyName(e.currentTarget.value)}
@@ -226,54 +247,56 @@ const MediaSettingsPage = () => {
               </AlertDescription>
             </Alert>
           </Show>
-          <Table>
-            <Thead>
-              <Tr>
-                <Th>{t("manage.media_lib.key_note")}</Th>
-                <Th>{t("manage.media_lib.key_prefix")}</Th>
-                <Th>{t("manage.media_lib.key_last_used")}</Th>
-                <Th />
-              </Tr>
-            </Thead>
-            <Tbody>
-              <For
-                each={keys()}
-                fallback={
-                  <Tr>
-                    <Td colSpan={4}>
-                      <Text color="$neutral11">
-                        {t("manage.media_lib.no_keys")}
-                      </Text>
-                    </Td>
-                  </Tr>
-                }
-              >
-                {(key) => (
-                  <Tr>
-                    <Td>{key.name}</Td>
-                    <Td>
-                      <Text css={{ fontFamily: "$mono" }}>{key.prefix}…</Text>
-                    </Td>
-                    <Td>
-                      <Text fontSize="$xs" color="$neutral11">
-                        {key.last_used_at || t("manage.media_lib.key_never")}
-                      </Text>
-                    </Td>
-                    <Td>
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        colorScheme="danger"
-                        onClick={() => removeKey(key)}
-                      >
-                        {t("manage.media_lib.delete")}
-                      </Button>
-                    </Td>
-                  </Tr>
-                )}
-              </For>
-            </Tbody>
-          </Table>
+          <Box overflowX="auto">
+            <Table>
+              <Thead>
+                <Tr>
+                  <Th>{t("manage.media_lib.key_note")}</Th>
+                  <Th>{t("manage.media_lib.key_prefix")}</Th>
+                  <Th>{t("manage.media_lib.key_last_used")}</Th>
+                  <Th />
+                </Tr>
+              </Thead>
+              <Tbody>
+                <For
+                  each={keys()}
+                  fallback={
+                    <Tr>
+                      <Td colSpan={4}>
+                        <Text color="$neutral11">
+                          {t("manage.media_lib.no_keys")}
+                        </Text>
+                      </Td>
+                    </Tr>
+                  }
+                >
+                  {(key) => (
+                    <Tr>
+                      <Td>{key.name}</Td>
+                      <Td>
+                        <Text css={{ fontFamily: "$mono" }}>{key.prefix}…</Text>
+                      </Td>
+                      <Td>
+                        <Text fontSize="$xs" color="$neutral11">
+                          {key.last_used_at || t("manage.media_lib.key_never")}
+                        </Text>
+                      </Td>
+                      <Td>
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          colorScheme="danger"
+                          onClick={() => removeKey(key)}
+                        >
+                          {t("manage.media_lib.delete")}
+                        </Button>
+                      </Td>
+                    </Tr>
+                  )}
+                </For>
+              </Tbody>
+            </Table>
+          </Box>
         </VStack>
       </Box>
     </VStack>

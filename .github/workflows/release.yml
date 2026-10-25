@@ -8,6 +8,42 @@ permissions:
   contents: write
 
 jobs:
+  frontend:
+    name: Build local frontend
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        build-type: [standard, lite]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Build frontend
+        id: frontend
+        uses: ./.github/actions/build-frontend
+        with:
+          build-type: ${{ matrix.build-type }}
+          version: ${{ github.event.release.tag_name }}
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: frontend-${{ matrix.build-type }}
+          path: web/dist/
+          include-hidden-files: true
+          if-no-files-found: error
+      - name: Publish frontend archive and checksum
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          FRONTEND_VERSION: ${{ steps.frontend.outputs.version }}
+          BUILD_TYPE: ${{ matrix.build-type }}
+        run: |
+          suffix=""
+          if [ "$BUILD_TYPE" = lite ]; then suffix="-lite"; fi
+          archive="openlist-frontend-dist${suffix}-${FRONTEND_VERSION}.tar.gz"
+          tar -czf "$archive" -C web/dist .
+          sha256sum "$archive" > "${archive}.sha256"
+          gh release upload "$RELEASE_TAG" "$archive" "${archive}.sha256" --clobber
+
   # Set release to prerelease first
   prerelease:
     name: Set Prerelease
@@ -22,7 +58,7 @@ jobs:
 
   # Main release job for all platforms
   release:
-    needs: prerelease
+    needs: [prerelease, frontend]
     strategy:
       matrix:
         build-type: [ 'standard', 'lite' ]
@@ -62,12 +98,19 @@ jobs:
           go install github.com/crazy-max/xgo@latest
           sudo apt install upx
 
+      - name: Download local frontend
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: frontend-${{ matrix.build-type }}
+          path: public/dist
+
       - name: Build
         run: |
           bash build.sh release ${{ matrix.build-type == 'lite' && 'lite' || '' }} ${{ matrix.target-platform }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FRONTEND_REPO: ${{ vars.FRONTEND_REPO }}
+          OPENLIST_FRONTEND_DIR: public/dist
+          OPENLIST_VERSION: ${{ github.event.release.tag_name }}
 
       - name: Upload assets
         env:

@@ -717,6 +717,7 @@ export const MediaManagePage = (props: MediaManagePageProps) => {
 
   return (
     <VStack
+      class="media-settings-page"
       p={{ "@initial": "$3", "@md": "$6" }}
       spacing="$4"
       alignItems="stretch"
@@ -734,7 +735,12 @@ export const MediaManagePage = (props: MediaManagePageProps) => {
       </HStack>
 
       {/* 工具栏：页签 + 操作按钮 + 当前类型开关（原「基础配置」合并到这里） */}
-      <Box bgColor="$neutral1" rounded="$lg" border="1px solid $neutral4">
+      <Box
+        class="media-settings-card"
+        bgColor="$neutral1"
+        rounded="$lg"
+        border="1px solid $neutral4"
+      >
         <VStack px="$4" py="$3" spacing="$2" alignItems="stretch">
           <HStack
             justifyContent="space-between"
@@ -860,7 +866,12 @@ export const MediaManagePage = (props: MediaManagePageProps) => {
 
       {/* 扫描路径 */}
       <Show when={tab() === "paths"}>
-        <Box bgColor="$neutral1" rounded="$lg" border="1px solid $neutral4">
+        <Box
+          class="media-settings-card"
+          bgColor="$neutral1"
+          rounded="$lg"
+          border="1px solid $neutral4"
+        >
           <HStack
             px="$4"
             py="$3"
@@ -879,156 +890,165 @@ export const MediaManagePage = (props: MediaManagePageProps) => {
               {t("media.admin.add_path")}
             </Button>
           </HStack>
-          <Table>
-            <Thead>
-              <Tr>
-                <Th>{t("media.admin.col_path_name")}</Th>
-                <Th>{t("media.admin.col_scan_path")}</Th>
-                <Th>{t("media.admin.col_type_tags")}</Th>
-                <Th>{t("media.admin.col_content_tags")}</Th>
-                <Th>{t("media.admin.col_path_merge")}</Th>
-                <Th>{t("media.admin.col_scrape")}</Th>
-                <Th>{t("media.admin.col_last_scan")}</Th>
-                <Th>{t("media.admin.col_actions")}</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              <Show
-                when={scanPaths().length > 0}
-                fallback={
-                  <Tr>
-                    <Td colSpan={8}>
-                      <Text textAlign="center" color="$neutral11" py="$6">
-                        {t("media.admin.no_scan_paths")}
-                      </Text>
-                    </Td>
-                  </Tr>
-                }
-              >
-                <For each={scanPaths()}>
-                  {(sp) => (
+          <Box overflowX="auto">
+            <Table>
+              <Thead>
+                <Tr>
+                  <Th>{t("media.admin.col_path_name")}</Th>
+                  <Th>{t("media.admin.col_scan_path")}</Th>
+                  <Th>{t("media.admin.col_type_tags")}</Th>
+                  <Th>{t("media.admin.col_content_tags")}</Th>
+                  <Th>{t("media.admin.col_path_merge")}</Th>
+                  <Th>{t("media.admin.col_scrape")}</Th>
+                  <Th>{t("media.admin.col_last_scan")}</Th>
+                  <Th>{t("media.admin.col_actions")}</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                <Show
+                  when={scanPaths().length > 0}
+                  fallback={
                     <Tr>
-                      <Td>{sp.name || "-"}</Td>
-                      <Td>
-                        <Text fontFamily="$mono" fontSize="$xs">
-                          {sp.path}
+                      <Td colSpan={8}>
+                        <Text textAlign="center" color="$neutral11" py="$6">
+                          {t("media.admin.no_scan_paths")}
                         </Text>
-                      </Td>
-                      <Td>
-                        <Show when={sp.type_tag}>
-                          <Badge colorScheme="info">{sp.type_tag}</Badge>
-                        </Show>
-                      </Td>
-                      <Td>
-                        <HStack spacing="$1" flexWrap="wrap">
-                          <For
-                            each={(sp.content_tags || "")
-                              .split(",")
-                              .filter(Boolean)}
-                          >
-                            {(tag) => (
-                              <Badge colorScheme="accent">{tag.trim()}</Badge>
-                            )}
-                          </For>
-                        </HStack>
-                      </Td>
-                      <Td>
-                        <Text
-                          fontSize="$xs"
-                          color={sp.path_merge ? "$success11" : "$neutral11"}
-                        >
-                          {sp.path_merge
-                            ? t("media.admin.yes")
-                            : t("media.admin.no")}
-                        </Text>
-                      </Td>
-                      <Td>
-                        <Text
-                          fontSize="$xs"
-                          color={sp.enable_scrape ? "$success11" : "$neutral11"}
-                        >
-                          {sp.enable_scrape
-                            ? t("media.admin.yes")
-                            : t("media.admin.no")}
-                        </Text>
-                      </Td>
-                      <Td>
-                        <Text fontSize="$xs" color="$neutral11">
-                          {sp.last_scan_at
-                            ? new Date(sp.last_scan_at).toLocaleString(
-                                "zh-CN",
-                                {
-                                  month: "2-digit",
-                                  day: "2-digit",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                },
-                              )
-                            : t("media.admin.never")}
-                        </Text>
-                      </Td>
-                      <Td>
-                        <HStack spacing="$1" flexWrap="nowrap">
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            loading={scanning()}
-                            onClick={() => handleScanPath(sp)}
-                          >
-                            {t("media.admin.scan")}
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            colorScheme="success"
-                            onClick={() => handleOpenEditScanPath(sp)}
-                          >
-                            {t("media.admin.edit")}
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            onClick={() => handleExportScanPath(sp)}
-                          >
-                            {t("media.admin.export")}
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            onClick={() => handleImportScanPath(sp)}
-                          >
-                            {t("media.admin.import")}
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            colorScheme="warning"
-                            onClick={() => handleClearScanPathDB(sp)}
-                          >
-                            {t("media.admin.clear")}
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            colorScheme="danger"
-                            onClick={() => handleDeleteScanPath(sp)}
-                          >
-                            {t("global.delete")}
-                          </Button>
-                        </HStack>
                       </Td>
                     </Tr>
-                  )}
-                </For>
-              </Show>
-            </Tbody>
-          </Table>
+                  }
+                >
+                  <For each={scanPaths()}>
+                    {(sp) => (
+                      <Tr>
+                        <Td>{sp.name || "-"}</Td>
+                        <Td>
+                          <Text fontFamily="$mono" fontSize="$xs">
+                            {sp.path}
+                          </Text>
+                        </Td>
+                        <Td>
+                          <Show when={sp.type_tag}>
+                            <Badge colorScheme="info">{sp.type_tag}</Badge>
+                          </Show>
+                        </Td>
+                        <Td>
+                          <HStack spacing="$1" flexWrap="wrap">
+                            <For
+                              each={(sp.content_tags || "")
+                                .split(",")
+                                .filter(Boolean)}
+                            >
+                              {(tag) => (
+                                <Badge colorScheme="accent">{tag.trim()}</Badge>
+                              )}
+                            </For>
+                          </HStack>
+                        </Td>
+                        <Td>
+                          <Text
+                            fontSize="$xs"
+                            color={sp.path_merge ? "$success11" : "$neutral11"}
+                          >
+                            {sp.path_merge
+                              ? t("media.admin.yes")
+                              : t("media.admin.no")}
+                          </Text>
+                        </Td>
+                        <Td>
+                          <Text
+                            fontSize="$xs"
+                            color={
+                              sp.enable_scrape ? "$success11" : "$neutral11"
+                            }
+                          >
+                            {sp.enable_scrape
+                              ? t("media.admin.yes")
+                              : t("media.admin.no")}
+                          </Text>
+                        </Td>
+                        <Td>
+                          <Text fontSize="$xs" color="$neutral11">
+                            {sp.last_scan_at
+                              ? new Date(sp.last_scan_at).toLocaleString(
+                                  "zh-CN",
+                                  {
+                                    month: "2-digit",
+                                    day: "2-digit",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  },
+                                )
+                              : t("media.admin.never")}
+                          </Text>
+                        </Td>
+                        <Td>
+                          <HStack spacing="$1" flexWrap="nowrap">
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              loading={scanning()}
+                              onClick={() => handleScanPath(sp)}
+                            >
+                              {t("media.admin.scan")}
+                            </Button>
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              colorScheme="success"
+                              onClick={() => handleOpenEditScanPath(sp)}
+                            >
+                              {t("media.admin.edit")}
+                            </Button>
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              onClick={() => handleExportScanPath(sp)}
+                            >
+                              {t("media.admin.export")}
+                            </Button>
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              onClick={() => handleImportScanPath(sp)}
+                            >
+                              {t("media.admin.import")}
+                            </Button>
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              colorScheme="warning"
+                              onClick={() => handleClearScanPathDB(sp)}
+                            >
+                              {t("media.admin.clear")}
+                            </Button>
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              colorScheme="danger"
+                              onClick={() => handleDeleteScanPath(sp)}
+                            >
+                              {t("global.delete")}
+                            </Button>
+                          </HStack>
+                        </Td>
+                      </Tr>
+                    )}
+                  </For>
+                </Show>
+              </Tbody>
+            </Table>
+          </Box>
         </Box>
       </Show>
 
       {/* 媒体管理 */}
       <Show when={tab() === "items"}>
-        <Box bgColor="$neutral1" rounded="$lg" border="1px solid $neutral4">
+        <Box
+          class="media-settings-card"
+          bgColor="$neutral1"
+          rounded="$lg"
+          border="1px solid $neutral4"
+        >
           <VStack
             px="$4"
             py="$3"
@@ -1132,168 +1152,170 @@ export const MediaManagePage = (props: MediaManagePageProps) => {
             </HStack>
           </VStack>
 
-          <Table>
-            <Thead>
-              <Tr>
-                <Th>{t("media.admin.col_file_name")}</Th>
-                <Th>{t("media.admin.col_name")}</Th>
-                <Th>{t("media.admin.col_cover")}</Th>
-                <Th>{t("media.admin.col_scan_path")}</Th>
-                <Th>{t("media.admin.col_release_date")}</Th>
-                <Th>{t("media.admin.col_rating")}</Th>
-                <Th>{t("media.admin.col_hidden")}</Th>
-                <Th>{t("media.admin.col_actions")}</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              <Show
-                when={!itemsData.loading}
-                fallback={
-                  <Tr>
-                    <Td colSpan={8}>
-                      <HStack justifyContent="center" py="$8">
-                        <Spinner />
-                      </HStack>
-                    </Td>
-                  </Tr>
-                }
-              >
+          <Box overflowX="auto">
+            <Table>
+              <Thead>
+                <Tr>
+                  <Th>{t("media.admin.col_file_name")}</Th>
+                  <Th>{t("media.admin.col_name")}</Th>
+                  <Th>{t("media.admin.col_cover")}</Th>
+                  <Th>{t("media.admin.col_scan_path")}</Th>
+                  <Th>{t("media.admin.col_release_date")}</Th>
+                  <Th>{t("media.admin.col_rating")}</Th>
+                  <Th>{t("media.admin.col_hidden")}</Th>
+                  <Th>{t("media.admin.col_actions")}</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
                 <Show
-                  when={items().length > 0}
+                  when={!itemsData.loading}
                   fallback={
                     <Tr>
                       <Td colSpan={8}>
-                        <Text textAlign="center" color="$neutral11" py="$8">
-                          {t("media.admin.no_items")}
-                        </Text>
+                        <HStack justifyContent="center" py="$8">
+                          <Spinner />
+                        </HStack>
                       </Td>
                     </Tr>
                   }
                 >
-                  <For each={items()}>
-                    {(item) => (
+                  <Show
+                    when={items().length > 0}
+                    fallback={
                       <Tr>
-                        <Td maxW="200px">
-                          <span
-                            title={item.file_name}
-                            style={{
-                              display: "block",
-                              "font-size": "12px",
-                              overflow: "hidden",
-                              "text-overflow": "ellipsis",
-                              "white-space": "nowrap",
-                            }}
-                          >
-                            {item.file_name}
-                          </span>
-                        </Td>
-                        <Td maxW="180px">
-                          <span
-                            style={{
-                              display: "block",
-                              "font-size": "14px",
-                              "font-weight": "500",
-                              overflow: "hidden",
-                              "text-overflow": "ellipsis",
-                              "white-space": "nowrap",
-                            }}
-                          >
-                            {item.scraped_name || item.file_name}
-                          </span>
-                        </Td>
-                        <Td>
-                          <Show
-                            when={item.cover}
-                            fallback={
-                              <Box
-                                w="48px"
-                                h="64px"
-                                rounded="$md"
-                                bgColor="$neutral3"
-                                display="flex"
-                                alignItems="center"
-                                justifyContent="center"
-                              >
-                                <Text fontSize="$xl">{props.icon}</Text>
-                              </Box>
-                            }
-                          >
-                            <img
-                              src={resolveMediaCover(item.cover)}
-                              loading="lazy"
-                              alt={item.scraped_name || item.file_name}
-                              style={{
-                                width: "48px",
-                                height: "64px",
-                                "object-fit": "cover",
-                                "border-radius": "6px",
-                                border: "1px solid rgba(128,128,128,0.25)",
-                                "background-color": "rgba(128,128,128,0.08)",
-                              }}
-                            />
-                          </Show>
-                        </Td>
-                        <Td>
-                          <Text fontSize="$xs" color="$neutral11">
-                            {getScanPathName(item.scan_path_id)}
+                        <Td colSpan={8}>
+                          <Text textAlign="center" color="$neutral11" py="$8">
+                            {t("media.admin.no_items")}
                           </Text>
-                        </Td>
-                        <Td>
-                          <Text fontSize="$xs" color="$neutral11">
-                            {item.release_date?.slice(0, 10) || "-"}
-                          </Text>
-                        </Td>
-                        <Td>
-                          <Text fontSize="$xs" color="$neutral11">
-                            {item.rating > 0 ? item.rating.toFixed(1) : "-"}
-                          </Text>
-                        </Td>
-                        <Td>
-                          <Switch
-                            checked={item.hidden}
-                            onChange={async (e) => {
-                              await adminUpdateMediaItem({
-                                ...item,
-                                hidden: e.currentTarget.checked,
-                              })
-                              refetchItems()
-                            }}
-                          />
-                        </Td>
-                        <Td>
-                          <HStack spacing="$1">
-                            <Button
-                              size="xs"
-                              variant="ghost"
-                              onClick={() => {
-                                setEditingItem({ ...item })
-                                setShowEditModal(true)
-                              }}
-                            >
-                              {t("media.admin.edit")}
-                            </Button>
-                            <Button
-                              size="xs"
-                              variant="ghost"
-                              colorScheme="danger"
-                              onClick={() =>
-                                handleDeleteItem(
-                                  item.id,
-                                  item.scraped_name || item.file_name,
-                                )
-                              }
-                            >
-                              {t("global.delete")}
-                            </Button>
-                          </HStack>
                         </Td>
                       </Tr>
-                    )}
-                  </For>
+                    }
+                  >
+                    <For each={items()}>
+                      {(item) => (
+                        <Tr>
+                          <Td maxW="200px">
+                            <span
+                              title={item.file_name}
+                              style={{
+                                display: "block",
+                                "font-size": "12px",
+                                overflow: "hidden",
+                                "text-overflow": "ellipsis",
+                                "white-space": "nowrap",
+                              }}
+                            >
+                              {item.file_name}
+                            </span>
+                          </Td>
+                          <Td maxW="180px">
+                            <span
+                              style={{
+                                display: "block",
+                                "font-size": "14px",
+                                "font-weight": "500",
+                                overflow: "hidden",
+                                "text-overflow": "ellipsis",
+                                "white-space": "nowrap",
+                              }}
+                            >
+                              {item.scraped_name || item.file_name}
+                            </span>
+                          </Td>
+                          <Td>
+                            <Show
+                              when={item.cover}
+                              fallback={
+                                <Box
+                                  w="48px"
+                                  h="64px"
+                                  rounded="$md"
+                                  bgColor="$neutral3"
+                                  display="flex"
+                                  alignItems="center"
+                                  justifyContent="center"
+                                >
+                                  <Text fontSize="$xl">{props.icon}</Text>
+                                </Box>
+                              }
+                            >
+                              <img
+                                src={resolveMediaCover(item.cover)}
+                                loading="lazy"
+                                alt={item.scraped_name || item.file_name}
+                                style={{
+                                  width: "48px",
+                                  height: "64px",
+                                  "object-fit": "cover",
+                                  "border-radius": "6px",
+                                  border: "1px solid rgba(128,128,128,0.25)",
+                                  "background-color": "rgba(128,128,128,0.08)",
+                                }}
+                              />
+                            </Show>
+                          </Td>
+                          <Td>
+                            <Text fontSize="$xs" color="$neutral11">
+                              {getScanPathName(item.scan_path_id)}
+                            </Text>
+                          </Td>
+                          <Td>
+                            <Text fontSize="$xs" color="$neutral11">
+                              {item.release_date?.slice(0, 10) || "-"}
+                            </Text>
+                          </Td>
+                          <Td>
+                            <Text fontSize="$xs" color="$neutral11">
+                              {item.rating > 0 ? item.rating.toFixed(1) : "-"}
+                            </Text>
+                          </Td>
+                          <Td>
+                            <Switch
+                              checked={item.hidden}
+                              onChange={async (e) => {
+                                await adminUpdateMediaItem({
+                                  ...item,
+                                  hidden: e.currentTarget.checked,
+                                })
+                                refetchItems()
+                              }}
+                            />
+                          </Td>
+                          <Td>
+                            <HStack spacing="$1">
+                              <Button
+                                size="xs"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingItem({ ...item })
+                                  setShowEditModal(true)
+                                }}
+                              >
+                                {t("media.admin.edit")}
+                              </Button>
+                              <Button
+                                size="xs"
+                                variant="ghost"
+                                colorScheme="danger"
+                                onClick={() =>
+                                  handleDeleteItem(
+                                    item.id,
+                                    item.scraped_name || item.file_name,
+                                  )
+                                }
+                              >
+                                {t("global.delete")}
+                              </Button>
+                            </HStack>
+                          </Td>
+                        </Tr>
+                      )}
+                    </For>
+                  </Show>
                 </Show>
-              </Show>
-            </Tbody>
-          </Table>
+              </Tbody>
+            </Table>
+          </Box>
 
           {/* 分页 */}
           <Show when={total() > 0}>
@@ -1360,7 +1382,7 @@ export const MediaManagePage = (props: MediaManagePageProps) => {
         size="lg"
       >
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent class="media-settings-dialog">
           <ModalHeader>
             {editingScanPath()?.id
               ? t("media.admin.edit_scan_path")
@@ -1501,7 +1523,7 @@ export const MediaManagePage = (props: MediaManagePageProps) => {
         size="lg"
       >
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent class="media-settings-dialog">
           <ModalHeader>{t("media.admin.edit_item_title")}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
@@ -1586,7 +1608,7 @@ export const MediaManagePage = (props: MediaManagePageProps) => {
         size="md"
       >
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent class="media-settings-dialog">
           <ModalHeader>{confirmState()?.title}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
