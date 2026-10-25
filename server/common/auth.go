@@ -6,9 +6,11 @@ import (
 	"errors"
 
 	"github.com/OpenListTeam/OpenList/v4/internal/conf"
+	"github.com/OpenListTeam/OpenList/v4/internal/db"
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
-	"github.com/OpenListTeam/go-cache"
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/uuid"
 )
 
 var SecretKey []byte
@@ -19,13 +21,12 @@ type UserClaims struct {
 	jwt.RegisteredClaims
 }
 
-var validTokenCache = cache.NewMemCache[bool]()
-
-func GenerateToken(user *model.User) (tokenString string, err error) {
+func GenerateToken(user *model.User, contexts ...*gin.Context) (tokenString string, err error) {
 	claim := UserClaims{
 		Username: user.Username,
 		PwdTS:    user.PwdTS,
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.NewString(),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(conf.Conf.TokenExpiresIn) * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
@@ -35,17 +36,22 @@ func GenerateToken(user *model.User) (tokenString string, err error) {
 	if err != nil {
 		return "", err
 	}
-	validTokenCache.Set(tokenString, true)
+	session := model.UserSession{ID: claim.ID, UserID: user.ID, PwdTS: user.PwdTS,
+		CreatedAt: time.Now(), LastActiveAt: time.Now(), ExpiresAt: claim.ExpiresAt.Time}
+	if len(contexts) > 0 && contexts[0] != nil {
+		session.IP = contexts[0].ClientIP()
+		session.UserAgent = contexts[0].Request.UserAgent()
+	}
+	if err = db.CreateUserSession(&session); err != nil {
+		return "", err
+	}
 	return tokenString, err
 }
 
 func ParseToken(tokenString string) (*UserClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return SecretKey, nil
-	})
-	if IsTokenInvalidated(tokenString) {
-		return nil, errors.New("token is invalidated")
-	}
+	}, jwt.WithValidMethods([]string{"HS256"}))
 	if err != nil {
 		if ve, ok := err.(*jwt.ValidationError); ok {
 			if ve.Errors&jwt.ValidationErrorMalformed != 0 {
@@ -59,7 +65,15 @@ func ParseToken(tokenString string) (*UserClaims, error) {
 			}
 		}
 	}
+	if token == nil {
+		return nil, errors.New("invalid token")
+	}
 	if claims, ok := token.Claims.(*UserClaims); ok && token.Valid {
+		session, err := db.GetUserSession(claims.ID)
+		if err != nil || session.PwdTS != claims.PwdTS {
+			return nil, errors.New("token is invalidated")
+		}
+		db.TouchUserSession(claims.ID)
 		return claims, nil
 	}
 	return nil, errors.New("couldn't handle this token")
@@ -69,11 +83,18 @@ func InvalidateToken(tokenString string) error {
 	if tokenString == "" {
 		return nil // don't invalidate empty guest token
 	}
-	validTokenCache.Del(tokenString)
-	return nil
+	claims, err := ParseToken(tokenString)
+	if err != nil {
+		return nil
+	}
+	session, err := db.GetUserSession(claims.ID)
+	if err != nil {
+		return err
+	}
+	return db.DeleteUserSession(session.UserID, claims.ID)
 }
 
 func IsTokenInvalidated(tokenString string) bool {
-	_, ok := validTokenCache.Get(tokenString)
-	return !ok
+	_, err := ParseToken(tokenString)
+	return err != nil
 }

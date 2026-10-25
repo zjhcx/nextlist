@@ -22,6 +22,7 @@ import { setMe, me, getSettingBool } from "~/store"
 import { PEmptyResp, UserMethods, UserPermissions, PResp } from "~/types"
 import { handleResp, handleRespWithoutNotify, notify, r } from "~/utils"
 import { WebauthnItem } from "./Webauthnitems"
+import { Sessions } from "./Sessions"
 import { PublicKeys } from "./PublicKeys"
 
 const supported = () =>
@@ -297,6 +298,9 @@ const Profile = () => {
         >
           {t("users.add_webauthn")}
         </Button>
+      </Show>
+      <Show when={!UserMethods.is_guest(me())}>
+        <Sessions />
       </Show>
       <HStack wrap="wrap" gap="$2" mt="$2">
         <For each={UserPermissions}>

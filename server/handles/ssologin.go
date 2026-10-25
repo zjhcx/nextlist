@@ -398,7 +398,7 @@ func OIDCLoginCallback(c *gin.Context) {
 				return
 			}
 		}
-		token, err := common.GenerateToken(user)
+		token, err := common.GenerateToken(user, c)
 		if err != nil {
 			common.ErrorResp(c, err, 400)
 			return
@@ -560,7 +560,7 @@ func SSOLoginCallback(c *gin.Context) {
 			return
 		}
 	}
-	token, err := common.GenerateToken(user)
+	token, err := common.GenerateToken(user, c)
 	if err != nil {
 		common.ErrorResp(c, err, 400)
 		return

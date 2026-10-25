@@ -81,6 +81,10 @@ func Init(e *gin.Engine) {
 	api.POST("/auth/login/hash", handles.LoginHash)
 	api.POST("/auth/login/ldap", handles.LoginLdap)
 	auth.GET("/me", handles.CurrentUser)
+	sessions := auth.Group("/me/session", middlewares.AuthNotGuest)
+	sessions.GET("/list", handles.ListMySessions)
+	sessions.POST("/delete", handles.DeleteMySession)
+	sessions.POST("/delete_others", handles.DeleteOtherSessions)
 	auth.POST("/me/update", handles.UpdateCurrent)
 	// 媒体应用密钥（每个登录用户都可以为自己的客户端签发密钥）
 	auth.GET("/me/appkey/list", handles.ListMediaAppKeys)
