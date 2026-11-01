@@ -13,8 +13,6 @@ import {
   lazy,
   Match,
   onCleanup,
-  Show,
-  Suspense,
   Switch,
 } from "solid-js"
 import { Portal } from "solid-js/web"
@@ -40,35 +38,12 @@ import {
   siteThemeColor,
 } from "~/components/Appearance"
 import { globalStyles } from "./theme"
-import { MediaShell } from "./MediaShell"
-import {
-  MediaSidebar,
-  MediaSidebarFloatingTrigger,
-} from "~/components/MediaSidebar"
-import { mediaEnabled, mediaSidebarOpen, setMediaStatus } from "~/store/media"
-import type { MediaStatus } from "~/store/media"
-import {
-  accent,
-  mediaAccentEnabled,
-} from "~/store/accent"
 
 const Home = lazy(() => import("~/pages/home/Layout"))
 const Manage = lazy(() => import("~/pages/manage"))
 const Login = lazy(() => import("~/pages/login"))
 const Init = lazy(() => import("~/pages/init"))
 const Test = lazy(() => import("~/pages/test"))
-const VideoLibrary = lazy(() => import("~/pages/media/video/VideoLibrary"))
-const MusicLibrary = lazy(() => import("~/pages/media/music/MusicLibrary"))
-const ImageLibrary = lazy(() => import("~/pages/media/image/ImageLibrary"))
-const BookLibrary = lazy(() => import("~/pages/media/book/BookLibrary"))
-// 播放器常驻在各个媒体页之上，但只有进入媒体库才需要：
-// 改为懒加载，避免把播放器模块塞进入口 chunk（媒体库关闭时白付流量）
-const MusicPlayer = lazy(() =>
-  import("~/pages/media/music/player").then((m) => ({
-    default: m.MusicPlayer,
-  })),
-)
-
 const App: Component = () => {
   const { colorMode } = useColorMode()
   const t = useT()
@@ -137,13 +112,6 @@ const App: Component = () => {
           // (e) => setErr(err().concat(e)),
         )
       })(),
-      (async () => {
-        handleRespWithoutAuthAndNotify(
-          (await r.get("/public/media_status")) as Resp<MediaStatus>,
-          setMediaStatus,
-          // 媒体库未启用时该接口也返回 200，不会走到这里
-        )
-      })(),
     ]),
   )
   data()
@@ -155,30 +123,12 @@ const App: Component = () => {
     }
   })
 
-  // 媒体库关闭时，/@media/* 等同于不存在（设置入口在后台管理内）
+  // Keep the site appearance palette in sync with color mode and settings.
   createEffect(() => {
-    if (!loading() && !mediaEnabled() && pathname().startsWith("/@media")) {
-      to("/", true)
-    }
-  })
-
-  // 媒体主题色只在媒体库页面生效：文件页 / 管理页 / 设置页一律使用站点默认色板，
-  // 避免 --hope-colors-* 的全局覆盖污染整站配色（登录、初始化页同理）。
-  // 明暗模式各有一套色阶，切换配色模式时重新写入。
-  createEffect(() => {
-    const dark = colorMode() === "dark"
-    const onMediaPage = pathname().startsWith("/@media")
     appearancePaletteDeps()
-    // 媒体页优先使用媒体主题色，其它页面使用外观设置中的站点主题色
-    const useMedia = mediaEnabled() && mediaAccentEnabled() && onMediaPage
-    applyAppearancePalette(useMedia ? accent() : siteThemeColor(), dark)
+    applyAppearancePalette(siteThemeColor(), colorMode() === "dark")
   })
 
-  // 后台管理、登录与初始化页面不显示媒体库侧栏
-  const hideMediaSidebarPath = () =>
-    ["/@manage", "/@login", "/@init"].some((p) => pathname().startsWith(p))
-  const mediaSidebarVisible = () =>
-    mediaEnabled() && mediaSidebarOpen() && !hideMediaSidebarPath()
   return (
     <>
       <AppearanceBackground />
@@ -197,12 +147,6 @@ const App: Component = () => {
         </Progress>
       </Portal>
       <HStack alignItems="stretch" spacing="$0" w="$full" minH="100vh">
-        <Show when={mediaSidebarVisible()}>
-          <MediaSidebar />
-        </Show>
-        <Show when={!hideMediaSidebarPath()}>
-          <MediaSidebarFloatingTrigger />
-        </Show>
         <Box flex="1" minW="0">
           <Switch
             fallback={
@@ -216,59 +160,6 @@ const App: Component = () => {
                     <MustUser>
                       <Manage />
                     </MustUser>
-                  }
-                />
-                {/* 媒体库页面：顶栏复用 main 的 Header，侧栏为可收起抽屉 */}
-                <Route
-                  path="/@media/video/*"
-                  element={
-                    <UserOrGuest>
-                      <MediaShell>
-                        <Suspense fallback={null}>
-                          <MusicPlayer />
-                        </Suspense>
-                        <VideoLibrary />
-                      </MediaShell>
-                    </UserOrGuest>
-                  }
-                />
-                <Route
-                  path="/@media/music/*"
-                  element={
-                    <UserOrGuest>
-                      <MediaShell>
-                        <Suspense fallback={null}>
-                          <MusicPlayer />
-                        </Suspense>
-                        <MusicLibrary />
-                      </MediaShell>
-                    </UserOrGuest>
-                  }
-                />
-                <Route
-                  path="/@media/image/*"
-                  element={
-                    <UserOrGuest>
-                      <MediaShell>
-                        <Suspense fallback={null}>
-                          <MusicPlayer />
-                        </Suspense>
-                        <ImageLibrary />
-                      </MediaShell>
-                    </UserOrGuest>
-                  }
-                />
-                <Route
-                  path="/@media/books/*"
-                  element={
-                    <UserOrGuest>
-                      <MediaShell>
-                        <Suspense fallback={null}>
-                          <MusicPlayer />
-                        </Suspense>
-                        <BookLibrary />
-                      </MediaShell>
-                    </UserOrGuest>
                   }
                 />
                 <Route

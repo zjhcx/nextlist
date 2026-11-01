@@ -30,13 +30,6 @@ const appearanceDictionary = (locale: string) => {
   )
 }
 
-const mediaSettingsModules = import.meta.glob<Record<string, unknown>>(
-  "~/lang/*/media_settings.json",
-  { eager: true, import: "default" },
-)
-const mediaSettingsDictionary = (locale: string) =>
-  i18n.flatten(mediaSettingsModules[`/src/lang/${locale}/media_settings.json`] ?? {})
-
 // all available languages
 export const languages = Object.keys(langs).map((langPath) => {
   const langCode = langPath.split("/")[3]
@@ -77,7 +70,6 @@ const fetchEnDict = async (): Promise<Dictionary> => {
     enDictCache = {
       ...i18n.flatten(dict),
       ...appearanceDictionary("en"),
-      ...mediaSettingsDictionary("en"),
     } as Dictionary
   }
   return enDictCache
@@ -96,14 +88,12 @@ const fetchDictionary = async (locale: Lang): Promise<Dictionary> => {
         ...enDict,
         ...flatDict,
         ...appearanceDictionary(locale),
-        ...mediaSettingsDictionary(locale),
       } as Dictionary
     }
 
     return {
       ...flatDict,
       ...appearanceDictionary(locale),
-      ...mediaSettingsDictionary(locale),
     } as Dictionary
   } catch (err) {
     console.error(`Error loading dictionary for locale: ${locale}`, err)

@@ -52,6 +52,13 @@
       "video360": "全景影片播放器",
       "archive": "壓縮包預覽器",
       "torrent": "傳輸種子預覽器"
+    },
+    "video": {
+      "decode_disabled": "禁用",
+      "decode_audio_only": "僅解碼音訊",
+      "decode_all": "全部解碼",
+      "mediabunny_player": "MediaBunny 播放器",
+      "mode_reload_confirm": "切換播放器模式需要刷新頁面。立即刷新？"
     }
   },
   "layouts": {
@@ -384,32 +391,5 @@
     "overwrite_existing": "覆蓋現有檔案",
     "skip_existing": "跳過現有檔案",
     "merge": "僅複製新檔案和資料夾"
-  },
-  "media": {
-    "title": "媒體庫",
-    "nav_files": "檔案列表",
-    "nav_video": "影視",
-    "nav_music": "專輯與音樂人",
-    "nav_image": "圖片",
-    "nav_book": "電子書與期刊",
-    "nav_settings": "媒體設置",
-    "nav_manage": "媒體管理",
-    "open_with": "使用本地播放器打開",
-    "copy_link": "複製直鏈",
-    "download_strm": "下載 .strm",
-    "settings_title": "媒體庫設置",
-    "settings_general": "常規",
-    "settings_scrape": "刮削",
-    "settings_strm": "STRM",
-    "settings_protocol": "協議",
-    "settings_appkeys": "應用密鑰",
-    "appkey_create": "創建密鑰",
-    "appkey_name": "密鑰名稱",
-    "appkey_once": "密鑰僅顯示一次，請立即複製保存。",
-    "emby_endpoint": "Emby 接口地址",
-    "subsonic_endpoint": "Subsonic 接口地址",
-    "strm_generate": "立即生成 STRM",
-    "strm_generated": "已在 {{path}} 生成 {{count}} 個 .strm 檔案",
-    "enabled_tip": "媒體庫已關閉，啓用後將顯示媒體入口。"
   }
 }

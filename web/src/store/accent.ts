@@ -1,64 +1,3 @@
-import { createSignal } from "solid-js"
-import { getMainColor } from "./settings"
-
-export interface AccentPreset {
-  name: string
-  color: string
-}
-
-/**
- * Curated accent presets.
- * Default follows the site main color (OpenList blue); presets are refined
- * mid-tone colors that read well on both light and dark surfaces.
- */
-export const ACCENT_PRESETS: AccentPreset[] = [
-  { name: "Blue", color: "#2563eb" },
-  { name: "Indigo", color: "#4f46e5" },
-  { name: "Sky", color: "#0284c7" },
-  { name: "Teal", color: "#0d9488" },
-  { name: "Emerald", color: "#059669" },
-  { name: "Olive", color: "#65a30d" },
-  { name: "Amber", color: "#b45309" },
-  { name: "Rose", color: "#be123c" },
-  { name: "Violet", color: "#7c3aed" },
-  { name: "Slate", color: "#475569" },
-]
-
-const STORAGE_KEY = "openlist-accent-color"
-// 是否允许媒体主题色覆盖 hope-ui 的全局色板（默认开启，但只在媒体库页面生效）
-const ENABLED_KEY = "openlist-media-accent-enabled"
-
-const stored =
-  typeof localStorage !== "undefined"
-    ? (localStorage.getItem(STORAGE_KEY) ?? "")
-    : ""
-
-const storedEnabled =
-  typeof localStorage !== "undefined" ? localStorage.getItem(ENABLED_KEY) : null
-
-const [accentColor, setAccentColorRaw] = createSignal(stored)
-
-const [mediaAccentEnabledRaw, setMediaAccentEnabledRaw] = createSignal(
-  storedEnabled === null ? true : storedEnabled === "true",
-)
-
-/** 媒体主题色是否启用（关闭后媒体页同样使用站点默认色板） */
-export const mediaAccentEnabled = mediaAccentEnabledRaw
-
-export const setMediaAccentEnabled = (enabled: boolean) => {
-  setMediaAccentEnabledRaw(enabled)
-  try {
-    localStorage.setItem(ENABLED_KEY, String(enabled))
-  } catch {
-    /* ignore */
-  }
-}
-
-/** Current accent: user selection first, otherwise the site main color. */
-export const accent = () => accentColor() || getMainColor()
-
-export { accentColor }
-
 // ==================== color helpers ====================
 
 const clamp = (v: number, min = 0, max = 1) => Math.max(min, Math.min(max, v))
@@ -125,12 +64,6 @@ export const hslToHex = (h: number, s: number, l: number): string => {
   return rgbToHex((rgb[0] + m) * 255, (rgb[1] + m) * 255, (rgb[2] + m) * 255)
 }
 
-/** Shift lightness by delta (-1..1), keeping hue and saturation. */
-export const shiftLightness = (hex: string, delta: number): string => {
-  const [h, s, l] = hexToHsl(hex)
-  return hslToHex(h, s, clamp(l + delta))
-}
-
 /**
  * Build a 12-step palette around the base color using HSL lightness steps,
  * so hover/active/subtle states stay clean instead of turning muddy.
@@ -187,7 +120,7 @@ const isDarkMode = () =>
 
 /**
  * 把色板转换成 CSS 变量表，便于只作用在指定容器上。
- * 作用域化写入（而不是写 html/body）可以避免媒体主题色污染文件页、管理页等其它页面。
+ * 作用域化写入（而不是写 html/body）可以避免污染其它页面。
  */
 export const accentPaletteStyleVars = (
   color: string,
@@ -199,55 +132,4 @@ export const accentPaletteStyleVars = (
     vars[`--hope-colors-${key}`] = value
   })
   return vars
-}
-
-/** Write the palette to CSS variables so hope-ui components update live. */
-export const applyAccentPalette = (color: string, dark = isDarkMode()) => {
-  if (typeof document === "undefined") return
-  const vars = accentPaletteStyleVars(color, dark)
-  // 同时写入 html 与 body：body 上的内联变量优先级高于 .hope-ui-dark 的暗色变量
-  ;[document.documentElement, document.body].forEach((el) => {
-    Object.entries(vars).forEach(([key, value]) => {
-      el.style.setProperty(key, value)
-    })
-  })
-}
-
-const PALETTE_KEYS = [
-  ...Array.from({ length: 12 }, (_, i) => `accent${i + 1}`),
-  ...Array.from({ length: 12 }, (_, i) => `info${i + 1}`),
-]
-
-/** Remove inline overrides so the original theme palette (e.g. login page) is used. */
-export const clearAccentPalette = () => {
-  if (typeof document === "undefined") return
-  ;[document.documentElement, document.body].forEach((el) => {
-    PALETTE_KEYS.forEach((key) =>
-      el.style.removeProperty(`--hope-colors-${key}`),
-    )
-  })
-}
-
-/**
- * Set and persist the accent color.
- * 这里不直接写全局 CSS 变量：由 App 的 effect 根据当前路由决定是否生效，
- * 避免在文件页/管理页选色时污染整站配色。
- */
-export const setAccentColor = (color: string) => {
-  setAccentColorRaw(color)
-  try {
-    localStorage.setItem(STORAGE_KEY, color)
-  } catch {
-    /* ignore */
-  }
-}
-
-/** Restore the site default color. */
-export const resetAccentColor = () => {
-  setAccentColorRaw("")
-  try {
-    localStorage.removeItem(STORAGE_KEY)
-  } catch {
-    /* ignore */
-  }
 }

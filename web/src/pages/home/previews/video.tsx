@@ -42,7 +42,6 @@ import { ArtPlayerIconsSubtitle } from "~/components/icons"
 import { useNavigate } from "@solidjs/router"
 import "./artplayer.css"
 import { registerAc3Decoder } from "@mediabunny/ac3"
-import { requestTranscodePlay } from "~/utils/media_api"
 import { useT } from "~/hooks"
 // AC3 解码器改为按需注册：模块 import 期不产生任何副作用
 let ac3Registered = false
@@ -80,8 +79,6 @@ const Preview = () => {
       )
     }
   }
-  // 组件卸载标记：onMount 里的异步操作结束后据此决定是否继续初始化播放器
-  let disposed = false
   let player: Artplayer
   let flvPlayer: mpegts.Player
   let hlsPlayer: Hls
@@ -349,13 +346,13 @@ const Preview = () => {
   // 添加 MediaBunny 播放器三档模式选择到设置菜单
   const mediabunnyModeKey = (m: MediaBunnyMode) =>
     m === "disabled"
-      ? "media.video.decode_disabled"
+      ? "home.preview.video.decode_disabled"
       : m === "audio_only"
-        ? "media.video.decode_audio_only"
-        : "media.video.decode_all"
+        ? "home.preview.video.decode_audio_only"
+        : "home.preview.video.decode_all"
   option.settings?.push({
     id: "setting_mediabunny",
-    html: t("media.video.mediabunny_player"),
+    html: t("home.preview.video.mediabunny_player"),
     tooltip: t(mediabunnyModeKey(getMediaBunnyMode())),
     icon: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>',
     selector: (["disabled", "audio_only", "full"] as MediaBunnyMode[]).map(
@@ -369,7 +366,7 @@ const Preview = () => {
       const newMode = item.name as MediaBunnyMode
       setMediaBunnyMode(newMode)
       setTimeout(() => {
-        if (confirm(t("media.video.mode_reload_confirm"))) {
+        if (confirm(t("home.preview.video.mode_reload_confirm"))) {
           location.reload()
         }
       }, 100)
@@ -377,38 +374,9 @@ const Preview = () => {
     },
   })
 
-  onMount(async () => {
-    // ---- 云端转码判断 ----
-    // 播放前先调用后端转码决策接口，如果需要转码则使用 HLS master_url 播放
-    let useTranscode = false
-    try {
-      const tcResp = await requestTranscodePlay(pathname())
-      if (
-        tcResp.code === 200 &&
-        tcResp.data?.transcode &&
-        tcResp.data.master_url
-      ) {
-        useTranscode = true
-        option.url = tcResp.data.master_url
-        option.type = "m3u8"
-        // MediaBunny full 模式会用 canvas proxy 接管 video 元素，HLS.js 将无法挂载。
-        // 转码走 HLS，必须移除该 proxy（与媒体库播放器保持一致）。
-        delete (option as { proxy?: unknown }).proxy
-        console.log(
-          `[transcode] 使用云端转码播放: job=${tcResp.data.job_id}, profile=${tcResp.data.profile}`,
-        )
-      }
-    } catch (e) {
-      // 转码接口失败（可能未开启），静默降级到直链播放
-      console.debug("[transcode] 转码接口不可用，使用直链播放", e)
-    }
-
-    // 等待转码响应期间用户可能已离开页面：onCleanup 早已执行，
-    // 此时再创建实例就没有人会销毁它，必须放弃初始化。
-    if (disposed) return
-
-    // 预下载视频文件的前几个区块（仅直链模式，转码模式由 HLS.js 管理）
-    if (!useTranscode && objStore.raw_url) {
+  onMount(() => {
+    // Prefetch the first chunks of the original file.
+    if (objStore.raw_url) {
       void prefetchVideoChunks(objStore.raw_url, {
         byteRange: 8 * 1024 * 1024,
         timeoutMs: 3000,
@@ -416,12 +384,8 @@ const Preview = () => {
     }
     ensureAc3Decoder()
     player = new Artplayer(option)
-    // "仅音频"模式：原生 <video> 解码视频，mediabunny 只提供音轨（仅直链模式）
-    if (
-      !useTranscode &&
-      getMediaBunnyMode() === "audio_only" &&
-      objStore.raw_url
-    ) {
+    // "仅音频"模式：原生 <video> 解码视频，mediabunny 只提供音轨
+    if (getMediaBunnyMode() === "audio_only" && objStore.raw_url) {
       attachMediabunnyAudio(player, objStore.raw_url)
     }
     // 注意每个分支都要 break：旧代码缺少 break 导致 true 一路穿透并被重置为 false
@@ -474,7 +438,6 @@ const Preview = () => {
     })
   })
   onCleanup(() => {
-    disposed = true
     if (player && player.video) player.video.src = ""
     player?.destroy()
     flvPlayer?.destroy()

@@ -10,10 +10,7 @@ import {
 } from "@hope-ui/solid"
 import { withAlpha } from "~/utils/accent"
 import { Show, createMemo } from "solid-js"
-import { useRouter } from "~/hooks"
 import { getMainColor, getSetting, local, objStore, State } from "~/store"
-import { mediaEnabled } from "~/store/media"
-import { MediaSidebarTrigger } from "~/components/MediaSidebar"
 import { BsSearch } from "solid-icons/bs"
 import { CenterLoading } from "~/components"
 import { Container } from "../Container"
@@ -22,9 +19,6 @@ import { Layout } from "./layout"
 import { isMac } from "~/utils/compatibility"
 
 export const Header = (props: { flush?: boolean } = {}) => {
-  const { pathname } = useRouter()
-  // 媒体库页面有自己的视图切换，文件列表的布局切换对这里无意义
-  const isMediaPage = () => pathname().startsWith("/@media")
   const logos = getSetting("logo").split("\n")
   const logo = useColorModeValue(logos[0], logos.pop())
 
@@ -45,9 +39,6 @@ export const Header = (props: { flush?: boolean } = {}) => {
       justifyContent="space-between"
     >
       <HStack class="header-left" h="44px" spacing="$2">
-        <Show when={mediaEnabled()}>
-          <MediaSidebarTrigger />
-        </Show>
         <Image src={logo()!} h="$full" w="auto" fallback={<CenterLoading />} />
       </HStack>
       <HStack class="header-right" spacing="$2">
@@ -77,9 +68,7 @@ export const Header = (props: { flush?: boolean } = {}) => {
               </HStack>
             </HStack>
           </Show>
-          <Show when={!isMediaPage()}>
-            <Layout />
-          </Show>
+          <Layout />
         </Show>
       </HStack>
     </HStack>

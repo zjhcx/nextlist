@@ -49,7 +49,7 @@ func loginHash(c *gin.Context, req *LoginReq) {
 	ip := c.ClientIP()
 	count, ok := model.LoginCache.Get(ip)
 	if ok && count >= model.DefaultMaxAuthRetries {
-		// 被拒时不能再续期：自动重试的客户端（如凭据失效的 Subsonic/Web 轮询）
+		// 被拒时不能再续期：自动重试的客户端（如凭据失效的 Web 轮询）
 		// 会每来一次就刷新锁定窗口，把自己永久锁死。锁定窗口只在计数时设定。
 		common.ErrorStrResp(c, model.TooManyAttempts, 429)
 		return

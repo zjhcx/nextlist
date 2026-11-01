@@ -39,9 +39,6 @@ output/
 !web/src/lang/en/appearance.json
 !web/src/lang/zh-CN/appearance.json
 !web/src/lang/zh-TW/appearance.json
-!web/src/lang/en/media_settings.json
-!web/src/lang/zh-CN/media_settings.json
-!web/src/lang/zh-TW/media_settings.json
 
 # The in-repository frontend must be buildable from a clean checkout.
 !web/package.json

@@ -29,7 +29,7 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
 
-  # 媒体库相关的安全/配额/迁移测试单独跑一次，不必跟随 7 个构建目标重复执行
+  # 单元测试单独跑一次，不必跟随 7 个构建目标重复执行
   test:
     name: Unit tests
     runs-on: ubuntu-latest
@@ -46,7 +46,7 @@ jobs:
         run: python3 .github/scripts/test-prepared-frontend.py
 
       - name: Go test
-        run: go test ./internal/db/... ./internal/transcode/... ./internal/media/...
+        run: go test ./internal/db/... ./internal/bootstrap/data/... ./server/...
 
   build:
     needs: [frontend, test]

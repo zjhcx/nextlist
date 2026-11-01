@@ -119,21 +119,38 @@ func SortFiles(objs []Obj, orderBy, orderDirection string) {
 }
 
 func ExtractFolder(objs []Obj, extractFolder string) {
-	if extractFolder == "" {
+	if extractFolder == "" || len(objs) < 2 {
 		return
 	}
 	front := extractFolder == "front"
-	sort.SliceStable(objs, func(i, j int) bool {
-		if objs[i].IsDir() || objs[j].IsDir() {
-			if !objs[i].IsDir() {
-				return !front
-			}
-			if !objs[j].IsDir() {
-				return front
-			}
+
+	// Skip the already grouped prefix and avoid allocating for grouped listings.
+	first := 0
+	for first < len(objs) && objs[first].IsDir() == front {
+		first++
+	}
+	next := first
+	for next < len(objs) && objs[next].IsDir() != front {
+		next++
+	}
+	if next == len(objs) {
+		return
+	}
+
+	// Stable partition: compact the preferred group in place, then append the
+	// deferred group. Each object is moved only O(1) times, unlike stable sort.
+	deferred := make([]Obj, next-first, len(objs)-first)
+	copy(deferred, objs[first:next])
+	write := first
+	for _, obj := range objs[next:] {
+		if obj.IsDir() == front {
+			objs[write] = obj
+			write++
+		} else {
+			deferred = append(deferred, obj)
 		}
-		return false
-	})
+	}
+	copy(objs[write:], deferred)
 }
 
 func WrapObjName(obj Obj) Obj {
